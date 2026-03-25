@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Neon__create_project",
+      "mcp__Neon__run_sql",
+      "Bash(npx:*)"
+    ]
+  }
+}
