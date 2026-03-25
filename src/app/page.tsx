@@ -12,10 +12,11 @@ const pastSessions = [
   {
     city: "Paris",
     image: "/paris1.jpeg",
+    monochrome: true,
   },
   {
-    city: "Ischgl",
-    image: "/ischgl.jpeg",
+    city: "Berlin",
+    image: "/berlin.JPEG",
   },
 ];
 
@@ -120,7 +121,7 @@ export default function Home() {
           alt="Omah Lay"
           width={144}
           height={40}
-          priority
+          loading="eager"
           className="h-7 w-auto animate-fade-in brightness-0 invert sm:h-8"
         />
       </nav>
@@ -170,7 +171,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setShowSignupModal(true)}
-              className="group relative inline-flex min-h-13 w-full items-center justify-center gap-3 px-6 py-4 text-center bg-[#8B5CF6] text-[#0A0A0A] font-[family-name:var(--font-outfit)] text-[11px] tracking-[0.22em] uppercase font-semibold hover:bg-[#7C3AED] transition-all duration-500 hover:shadow-[0_0_40px_rgba(139,92,246,0.3)] sm:min-h-0 sm:w-auto sm:px-8 sm:text-xs sm:tracking-[0.25em]"
+              className="group relative inline-flex min-h-13 w-full cursor-pointer items-center justify-center gap-3 px-6 py-4 text-center bg-[#8B5CF6] text-[#0A0A0A] font-[family-name:var(--font-outfit)] text-[11px] tracking-[0.22em] uppercase font-semibold transition-colors duration-300 hover:bg-[#F5F0EB] sm:min-h-0 sm:w-auto sm:px-8 sm:text-xs sm:tracking-[0.25em]"
             >
               Register Now
               <svg
@@ -187,15 +188,6 @@ export default function Home() {
                 />
               </svg>
             </button>
-
-            <a
-              href="https://keyqaad.lnk.to/ClarityOfMind"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-13 w-full items-center justify-center gap-2 border border-white/[0.08] px-6 py-4 text-center text-[#F5F0EB]/70 font-[family-name:var(--font-outfit)] text-[11px] tracking-[0.22em] uppercase font-medium hover:border-[#8B5CF6]/40 hover:text-[#8B5CF6] transition-all duration-500 sm:min-h-0 sm:w-auto sm:px-8 sm:text-xs sm:tracking-[0.25em]"
-            >
-              Pre-Save Album
-            </a>
           </div>
         </div>
 
@@ -215,28 +207,26 @@ export default function Home() {
         <div className="mx-auto max-w-6xl">
           <div className="reveal mb-10 border-t border-white/[0.08] pt-6 sm:mb-16 sm:pt-8" />
 
-          <div className="relative pl-5 sm:pl-10">
-            <div className="absolute left-0 top-0 h-full w-px bg-gradient-to-b from-[#8B5CF6]/50 via-white/12 to-transparent" />
+          <div className="relative pl-8 sm:pl-10">
+            {/* Vertical timeline line — pinned to the dot column */}
+            <div className="absolute left-[7px] top-0 bottom-0 w-px bg-gradient-to-b from-[#8B5CF6]/50 via-white/[0.08] to-transparent sm:left-[9px]" />
+
             {[
               {
-                time: "2:00 PM - 3:30 PM",
-                title: "Mid-day Workout Session",
-              },
-              {
-                time: "3:30 PM - 6:00 PM",
+                time: "7:00 PM",
                 title: "Tattoo Sessions",
                 detail: "Get matching tattoos with Omah Lay",
               },
               {
-                time: "6:00 PM - 7:00 PM",
+                time: "8:30 PM",
                 title: "Body Piercing",
               },
               {
-                time: "7:30 PM - 8:30 PM",
+                time: "9:15 PM",
                 title: "Q&A",
               },
               {
-                time: "8:30 PM",
+                time: "10:00 PM",
                 title: "First Album Preview",
               },
               {
@@ -249,9 +239,11 @@ export default function Home() {
                 className="reveal relative border-b border-white/[0.08] py-6 last:border-b-0 sm:py-10"
                 style={{ transitionDelay: `${index * 120}ms` }}
               >
-                <div className="absolute -left-[23px] top-8 h-3 w-3 rounded-full border border-[#8B5CF6]/70 bg-[#0A0A0A] shadow-[0_0_18px_rgba(139,92,246,0.35)] sm:-left-[41px] sm:top-10" />
-                <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[220px_1fr] lg:gap-10">
-                  <p className="font-[family-name:var(--font-outfit)] text-[10px] tracking-[0.28em] uppercase text-[#8B5CF6]/75 sm:text-[11px] sm:tracking-[0.35em]">
+                {/* Timeline dot — centered on the vertical line */}
+                <div className="absolute left-[-25px] top-[2.1rem] h-[14px] w-[14px] -translate-x-1/2 rounded-full border border-[#8B5CF6]/70 bg-[#0A0A0A] shadow-[0_0_18px_rgba(139,92,246,0.35)] sm:left-[-31px] sm:top-[2.75rem]" />
+
+                <div className="grid grid-cols-1 gap-2 lg:grid-cols-[220px_1fr] lg:gap-10">
+                  <p className="font-[family-name:var(--font-outfit)] text-base font-medium tracking-[0.16em] uppercase text-[#8B5CF6]/85 sm:text-lg sm:tracking-[0.2em]">
                     {item.time}
                   </p>
                   <div>
@@ -296,7 +288,9 @@ export default function Home() {
                     alt={`${session.city} session`}
                     fill
                     sizes="(max-width: 767px) 100vw, 33vw"
-                    className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                    className={`object-cover transition-transform duration-700 group-hover:scale-[1.03] ${
+                      session.monochrome ? "grayscale" : ""
+                    }`}
                   />
                   <div className="absolute inset-0 bg-[#0A0A0A]/18" />
                   <div className="absolute inset-0 flex items-center justify-center p-5 text-center sm:p-6">
@@ -338,7 +332,7 @@ export default function Home() {
                 href={platform.href}
                 target="_blank"
                 rel="noreferrer"
-                className="font-[family-name:var(--font-outfit)] text-[10px] tracking-[0.2em] uppercase text-[#F5F0EB]/25 hover:text-[#8B5CF6] transition-colors duration-500"
+                className="cursor-pointer font-[family-name:var(--font-outfit)] text-[10px] tracking-[0.2em] uppercase text-[#F5F0EB]/25 hover:text-[#8B5CF6] transition-colors duration-500"
               >
                 {platform.label}
               </a>

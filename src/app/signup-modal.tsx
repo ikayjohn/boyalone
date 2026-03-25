@@ -28,6 +28,9 @@ interface SignupModalProps {
   sessionCity: string;
 }
 
+const PRESAVE_URL = "https://keyqaad.lnk.to/ClarityOfMind";
+const PRESAVE_UNLOCK_DELAY_SECONDS = 12;
+
 const BODY_ART_OPTIONS = [
   { value: "", label: "Select one..." },
   { value: "Tattoo", label: "Tattoo" },
@@ -54,6 +57,8 @@ export default function SignupModal({
   const [instagram, setInstagram] = useState("");
   const [bodyArtPreference, setBodyArtPreference] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [presaveStarted, setPresaveStarted] = useState(false);
+  const [unlockCountdown, setUnlockCountdown] = useState(0);
 
   function resetFormState() {
     setError("");
@@ -66,7 +71,27 @@ export default function SignupModal({
     setInstagram("");
     setBodyArtPreference("");
     setAgreedToTerms(false);
+    setPresaveStarted(false);
+    setUnlockCountdown(0);
   }
+
+  function handlePresaveClick() {
+    setPresaveStarted(true);
+    setUnlockCountdown(PRESAVE_UNLOCK_DELAY_SECONDS);
+    window.open(PRESAVE_URL, "_blank", "noopener,noreferrer");
+  }
+
+  useEffect(() => {
+    if (!presaveStarted || unlockCountdown <= 0) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setUnlockCountdown((current) => Math.max(current - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [presaveStarted, unlockCountdown]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -182,7 +207,7 @@ export default function SignupModal({
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-11 w-11 items-center justify-center border border-black/[0.08] text-[#171411]/65 transition-colors hover:border-[#8B5CF6]/50 hover:text-[#8B5CF6]"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center border border-black/[0.08] text-[#171411]/65 transition-colors hover:border-[#8B5CF6]/50 hover:text-[#8B5CF6]"
             aria-label="Close registration modal"
           >
             <span className="text-xl leading-none">&times;</span>
@@ -190,11 +215,7 @@ export default function SignupModal({
         </div>
 
         <div className="overflow-y-auto">
-          {loading ? (
-            <div className="flex min-h-[420px] items-center justify-center">
-              <div className="h-7 w-7 rounded-full border-2 border-[#8B5CF6] border-t-transparent animate-spin" />
-            </div>
-          ) : !session ? (
+          {!session && !loading ? (
             <div className="px-4 py-12 text-center sm:px-8 sm:py-16">
               <h3 className="font-[family-name:var(--font-playfair)] text-3xl text-[#171411]">
                 Session Unavailable
@@ -253,16 +274,19 @@ export default function SignupModal({
             <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
               <div className="border-b border-black/[0.08] px-4 py-6 sm:px-8 sm:py-8 lg:border-b-0 lg:border-r">
                 <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.3em] text-[#8B5CF6]/70">
-                  {session.status}
+                  {session?.status ?? "Loading Session"}
                 </p>
                 <h3 className="mt-3 font-[family-name:var(--font-playfair)] text-[2.2rem] leading-none text-[#171411] sm:mt-4 sm:text-5xl">
-                  {session.city}
+                  {session?.city ?? "Lagos"}
                 </h3>
 
                 <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-5">
-                  <InfoBlock label="Date" value={session.date} />
-                  <InfoBlock label="Venue" value={session.venue} />
-                  <InfoBlock label="Country" value={session.country} />
+                  <InfoBlock label="Date" value={session?.date ?? "Loading..."} />
+                  <InfoBlock label="Venue" value={session?.venue ?? "Loading..."} />
+                  <InfoBlock
+                    label="Country"
+                    value={session?.country ?? "Loading..."}
+                  />
                 </div>
 
                 {session.capacity && (
@@ -287,8 +311,9 @@ export default function SignupModal({
                 )}
 
                 <p className="mt-8 max-w-sm font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/60 sm:mt-10">
-                  An intimate, invite-only listening experience for{" "}
-                  <span className="text-[#171411]/80">Clarity of Mind</span>.
+                  A private night built around{" "}
+                  <span className="text-[#171411]/80">Clarity of Mind</span> and
+                  the energy of Lagos.
                 </p>
               </div>
 
@@ -305,10 +330,12 @@ export default function SignupModal({
                 ) : (
                   <>
                     <h3 className="font-[family-name:var(--font-playfair)] text-2xl text-[#171411]">
-                      Register
+                      Before You Register
                     </h3>
                     <p className="mt-2 font-[family-name:var(--font-outfit)] text-sm text-[#171411]/50">
-                      Secure your spot at the Lagos listening session.
+                      To be considered for the session, you need to pre-save{" "}
+                      <span className="text-[#171411]/80">Clarity of Mind</span>{" "}
+                      first. Once you do that, we&apos;ll open up the form here.
                     </p>
 
                     {error && (
@@ -319,127 +346,199 @@ export default function SignupModal({
                       </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="mt-6 space-y-5 sm:mt-8 sm:space-y-6">
-                      <Field
-                        id="fullName"
-                        label="Full Name"
-                        required
-                        value={fullName}
-                        onChange={setFullName}
-                        placeholder="Your full name"
-                      />
-                      <Field
-                        id="email"
-                        label="Email"
-                        type="email"
-                        required
-                        value={email}
-                        onChange={setEmail}
-                        placeholder="you@email.com"
-                      />
-                      <Field
-                        id="phone"
-                        label="Phone Number"
-                        type="tel"
-                        required
-                        value={phone}
-                        onChange={setPhone}
-                        placeholder="+234 800 000 0000"
-                      />
-                      <Field
-                        id="city"
-                        label="Your City"
-                        required
-                        value={city}
-                        onChange={setCity}
-                        placeholder="Where are you based?"
-                      />
-
-                      <div>
-                        <label
-                          htmlFor="instagram"
-                          className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
-                        >
-                          Instagram Handle
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-0 top-1/2 -translate-y-1/2 text-base text-[#171411]/35">
-                            @
-                          </span>
-                          <input
-                            id="instagram"
-                            type="text"
-                            value={instagram}
-                            onChange={(e) => setInstagram(e.target.value)}
-                            placeholder="yourhandle"
-                            className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
-                          />
-                        </div>
+                    {loading ? (
+                      <div className="mt-6 flex items-center gap-3 border border-black/[0.08] bg-white/60 px-4 py-3">
+                        <div className="h-4 w-4 rounded-full border-2 border-[#8B5CF6] border-t-transparent animate-spin" />
+                        <p className="font-[family-name:var(--font-outfit)] text-sm text-[#171411]/55">
+                          Getting the session details ready...
+                        </p>
                       </div>
+                    ) : null}
 
-                      <div>
-                        <label
-                          htmlFor="bodyArtPreference"
-                          className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
-                        >
-                          Tattoo or Piercing
-                        </label>
-                        <select
-                          id="bodyArtPreference"
-                          value={bodyArtPreference}
-                          onChange={(e) => setBodyArtPreference(e.target.value)}
-                          className="w-full appearance-none border-b border-black/[0.12] bg-transparent py-3 pr-8 font-[family-name:var(--font-outfit)] text-base text-[#171411] focus:border-[#8B5CF6] focus:outline-none"
-                        >
-                          {BODY_ART_OPTIONS.map((option) => (
-                            <option
-                              key={option.value}
-                              value={option.value}
-                              className="bg-[#F6F1E8] text-[#171411]"
-                            >
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="mt-6 border border-black/[0.08] bg-black/[0.02] px-4 py-4 sm:mt-8">
+                      <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.18em] text-[#171411]/45">
+                        Heads Up
+                      </p>
+                      <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
+                        This invite is for people who&apos;ve already shown love
+                        to the project. Hit the official pre-save link below and
+                        we&apos;ll unlock the registration form right after.
+                      </p>
+                    </div>
 
-                      <label className="flex cursor-pointer items-start gap-3 pt-1 sm:gap-4 sm:pt-2">
-                        <div className="relative mt-0.5 shrink-0">
-                          <input
-                            type="checkbox"
-                            checked={agreedToTerms}
-                            onChange={(e) => setAgreedToTerms(e.target.checked)}
-                            required
-                            className="peer sr-only"
-                          />
-                          <div className="h-5 w-5 border border-black/[0.16] transition-colors peer-checked:border-[#8B5CF6] peer-checked:bg-[#8B5CF6]" />
-                          <svg
-                            className="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 text-white opacity-0 transition-opacity peer-checked:opacity-100"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                        </div>
-                        <span className="font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/65">
-                          I agree to the terms and conditions, including the use
-                          of my data for this event.
-                        </span>
-                      </label>
-
+                    <div className="mt-5 flex flex-col gap-3 sm:mt-6">
                       <button
-                        type="submit"
-                        disabled={submitting}
-                        className="w-full bg-[#8B5CF6] px-6 py-4 font-[family-name:var(--font-outfit)] text-sm font-semibold uppercase tracking-[0.16em] text-[#0A0A0A] transition-all duration-300 hover:bg-[#7C3AED] hover:shadow-[0_0_40px_rgba(139,92,246,0.3)] disabled:cursor-not-allowed disabled:opacity-40 sm:px-8 sm:tracking-[0.18em]"
+                        type="button"
+                        onClick={handlePresaveClick}
+                        className="w-full cursor-pointer bg-[#8B5CF6] px-6 py-4 font-[family-name:var(--font-outfit)] text-sm font-semibold uppercase tracking-[0.16em] text-[#0A0A0A] transition-all duration-300 hover:bg-[#7C3AED] hover:shadow-[0_0_40px_rgba(139,92,246,0.3)] sm:px-8 sm:tracking-[0.18em]"
                       >
-                        {submitting ? "Registering..." : "Secure My Spot"}
+                        Pre-Save To Continue
                       </button>
-                    </form>
+                      <p className="font-[family-name:var(--font-outfit)] text-xs leading-relaxed text-[#171411]/45">
+                        The pre-save opens in a new tab. Come back here when
+                        you&apos;re done.
+                      </p>
+                    </div>
+
+                    {presaveStarted ? (
+                      unlockCountdown > 0 ? (
+                        <div className="mt-8 border-t border-black/[0.08] pt-8">
+                          <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.18em] text-[#8B5CF6]/80">
+                            Unlocking Registration
+                          </p>
+                          <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/60">
+                            Finish the pre-save in the other tab. Your form
+                            opens here in a moment.
+                          </p>
+                          <div className="mt-5 border border-black/[0.08] bg-white/70 px-4 py-5 text-center">
+                            <p className="font-[family-name:var(--font-playfair)] text-4xl text-[#171411]">
+                              {unlockCountdown}
+                            </p>
+                            <p className="mt-2 font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.18em] text-[#171411]/45">
+                              seconds
+                            </p>
+                          </div>
+                        </div>
+                      ) : session ? (
+                        <form
+                          onSubmit={handleSubmit}
+                          className="mt-8 space-y-5 border-t border-black/[0.08] pt-8 sm:space-y-6"
+                        >
+                          <div className="mb-1">
+                            <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.18em] text-[#8B5CF6]/80">
+                              You&apos;re Good To Go
+                            </p>
+                          </div>
+
+                          <Field
+                            id="fullName"
+                            label="Full Name"
+                            required
+                            value={fullName}
+                            onChange={setFullName}
+                            placeholder="Your full name"
+                          />
+                          <Field
+                            id="email"
+                            label="Email"
+                            type="email"
+                            required
+                            value={email}
+                            onChange={setEmail}
+                            placeholder="you@email.com"
+                          />
+                          <Field
+                            id="phone"
+                            label="Phone Number"
+                            type="tel"
+                            required
+                            value={phone}
+                            onChange={setPhone}
+                            placeholder="+234 800 000 0000"
+                          />
+                          <Field
+                            id="city"
+                            label="Your City"
+                            required
+                            value={city}
+                            onChange={setCity}
+                            placeholder="Where are you based?"
+                          />
+
+                          <div>
+                            <label
+                              htmlFor="instagram"
+                              className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
+                            >
+                              Instagram Handle
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 text-base text-[#171411]/35">
+                                @
+                              </span>
+                              <input
+                                id="instagram"
+                                type="text"
+                                value={instagram}
+                                onChange={(e) => setInstagram(e.target.value)}
+                                placeholder="yourhandle"
+                                className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="bodyArtPreference"
+                              className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
+                            >
+                              What are you coming for?
+                            </label>
+                            <select
+                              id="bodyArtPreference"
+                              value={bodyArtPreference}
+                              onChange={(e) => setBodyArtPreference(e.target.value)}
+                              className="w-full appearance-none border-b border-black/[0.12] bg-transparent py-3 pr-8 font-[family-name:var(--font-outfit)] text-base text-[#171411] focus:border-[#8B5CF6] focus:outline-none"
+                            >
+                              {BODY_ART_OPTIONS.map((option) => (
+                                <option
+                                  key={option.value}
+                                  value={option.value}
+                                  className="bg-[#F6F1E8] text-[#171411]"
+                                >
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <label className="flex cursor-pointer items-start gap-3 pt-1 sm:gap-4 sm:pt-2">
+                            <div className="relative mt-0.5 shrink-0">
+                              <input
+                                type="checkbox"
+                                checked={agreedToTerms}
+                                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                required
+                                className="peer sr-only"
+                              />
+                              <div className="h-5 w-5 border border-black/[0.16] transition-colors peer-checked:border-[#8B5CF6] peer-checked:bg-[#8B5CF6]" />
+                              <svg
+                                className="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 text-white opacity-0 transition-opacity peer-checked:opacity-100"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={3}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            </div>
+                            <span className="font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/65">
+                              I&apos;m happy for my details to be used for this
+                              event and I agree to the event terms.
+                            </span>
+                          </label>
+
+                          <button
+                            type="submit"
+                            disabled={submitting}
+                            className="w-full cursor-pointer bg-[#8B5CF6] px-6 py-4 font-[family-name:var(--font-outfit)] text-sm font-semibold uppercase tracking-[0.16em] text-[#0A0A0A] transition-all duration-300 hover:bg-[#7C3AED] hover:shadow-[0_0_40px_rgba(139,92,246,0.3)] disabled:cursor-not-allowed disabled:opacity-40 sm:px-8 sm:tracking-[0.18em]"
+                          >
+                            {submitting ? "Saving Your Spot..." : "Join The List"}
+                          </button>
+                        </form>
+                      ) : (
+                        <div className="mt-8 border-t border-black/[0.08] pt-8">
+                          <p className="font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/60">
+                            We&apos;re still pulling in the event details. Give it a
+                            moment and this form will be ready.
+                          </p>
+                        </div>
+                      )
+                    ) : null}
                   </>
                 )}
               </div>
