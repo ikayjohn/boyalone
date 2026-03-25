@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateQRCode, generateUniqueId } from "@/lib/qr";
@@ -17,6 +18,8 @@ export async function POST(request: NextRequest) {
       referralSource,
       agreedToTerms,
     } = body;
+    const normalizedEmail = email?.trim().toLowerCase();
+    const normalizedPhone = phone?.trim();
 
     // Validate required fields
     if (!sessionCity || !fullName || !email || !phone || !city) {
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
       where: {
         sessionId: session.id,
         email: {
-          equals: email,
+          equals: normalizedEmail,
           mode: "insensitive",
         },
       },
@@ -73,6 +76,20 @@ export async function POST(request: NextRequest) {
     if (existingSignup) {
       return NextResponse.json(
         { error: "This email is already registered for this session." },
+        { status: 409 }
+      );
+    }
+
+    const existingPhoneSignup = await prisma.signup.findFirst({
+      where: {
+        sessionId: session.id,
+        phone: normalizedPhone,
+      },
+    });
+
+    if (existingPhoneSignup) {
+      return NextResponse.json(
+        { error: "This phone number is already registered for this session." },
         { status: 409 }
       );
     }
@@ -90,31 +107,47 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique ID
-    const signupCount = await prisma.signup.count({
-      where: { sessionId: session.id },
-    });
-    const uniqueId = generateUniqueId(session.cityCode, signupCount + 1);
+    let signup = null;
 
-    // Generate QR code
-    const verifyUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/verify/${uniqueId}`;
-    const qrCodeData = await generateQRCode(verifyUrl);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const uniqueId = generateUniqueId(session.cityCode);
+      const verifyUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/verify/${uniqueId}`;
+      const qrCodeData = await generateQRCode(verifyUrl);
 
-    // Create signup record
-    const signup = await prisma.signup.create({
-      data: {
-        uniqueId,
-        sessionId: session.id,
-        fullName: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        city: city.trim(),
-        instagram: instagram?.trim() || null,
-        referralSource: bodyArtPreference || referralSource || null,
-        agreedToTerms: true,
-        qrCodeData,
-      },
-    });
+      try {
+        signup = await prisma.signup.create({
+          data: {
+            uniqueId,
+            sessionId: session.id,
+            fullName: fullName.trim(),
+            email: normalizedEmail,
+            phone: normalizedPhone,
+            city: city.trim(),
+            instagram: instagram?.trim() || null,
+            referralSource: bodyArtPreference || referralSource || null,
+            agreedToTerms: true,
+            qrCodeData,
+          },
+        });
+        break;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (!signup) {
+      return NextResponse.json(
+        { error: "Could not generate a unique pass ID. Please try again." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

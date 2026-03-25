@@ -8,7 +8,7 @@ export async function generateQRCode(data: string): Promise<string> {
   });
 }
 
-export function generateUniqueId(cityCode: string, count: number): string {
-  const padded = String(count).padStart(5, "0");
-  return `COM-${cityCode}-${padded}`;
+export function generateUniqueId(cityCode: string): string {
+  const randomNumber = Math.floor(10000 + Math.random() * 90000);
+  return `COM-${cityCode}-${randomNumber}`;
 }

@@ -15,8 +15,9 @@ const pastSessions = [
     monochrome: true,
   },
   {
-    city: "Berlin",
-    image: "/berlin.JPEG",
+    city: "Amsterdam",
+    image: "/amsterdam.JPEG",
+    darken: true,
   },
 ];
 
@@ -317,7 +318,8 @@ export default function Home() {
                     fill
                     sizes="(max-width: 767px) 100vw, 33vw"
                     className={`object-cover transition-transform duration-700 group-hover:scale-[1.03] ${
-                      session.monochrome ? "grayscale" : ""
+                      session.monochrome ? "grayscale brightness-80" : ""
+                    } ${session.darken ? "brightness-80" : ""
                     }`}
                   />
                   <div className="absolute inset-0 bg-[#0A0A0A]/18" />
