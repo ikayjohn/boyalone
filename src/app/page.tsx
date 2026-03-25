@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import SignupModal from "./signup-modal";
+import SignupModal, { type SessionInfo } from "./signup-modal";
 
 const pastSessions = [
   {
@@ -53,6 +53,7 @@ const socialLinks = [
 
 export default function Home() {
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [lagosSession, setLagosSession] = useState<SessionInfo | null>(null);
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -72,6 +73,32 @@ export default function Home() {
     });
 
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function preloadSession() {
+      try {
+        const res = await fetch("/api/sessions/lagos");
+        if (!res.ok) {
+          return;
+        }
+
+        const data = await res.json();
+        if (!cancelled) {
+          setLagosSession(data.session);
+        }
+      } catch {
+        // Keep the modal fallback fetch path intact if the preload misses.
+      }
+    }
+
+    preloadSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -112,6 +139,7 @@ export default function Home() {
         isOpen={showSignupModal}
         onClose={() => setShowSignupModal(false)}
         sessionCity="lagos"
+        initialSession={lagosSession}
       />
 
       {/* ─── NAVIGATION ─── */}

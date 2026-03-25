@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-interface SessionInfo {
+export interface SessionInfo {
   id: number;
   city: string;
   cityCode: string;
@@ -26,6 +26,7 @@ interface SignupModalProps {
   isOpen: boolean;
   onClose: () => void;
   sessionCity: string;
+  initialSession?: SessionInfo | null;
 }
 
 const PRESAVE_URL = "https://keyqaad.lnk.to/ClarityOfMind";
@@ -42,13 +43,14 @@ export default function SignupModal({
   isOpen,
   onClose,
   sessionCity,
+  initialSession = null,
 }: SignupModalProps) {
-  const [session, setSession] = useState<SessionInfo | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState<SessionInfo | null>(initialSession);
+  const [loading, setLoading] = useState(initialSession === null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<SignupResult | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(initialSession !== null);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -103,6 +105,14 @@ export default function SignupModal({
       document.body.style.overflow = "";
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (initialSession) {
+      setSession(initialSession);
+      setHasLoaded(true);
+      setLoading(false);
+    }
+  }, [initialSession]);
 
   useEffect(() => {
     if (!isOpen || hasLoaded) {
@@ -190,9 +200,11 @@ export default function SignupModal({
   }
 
   const isFull =
-    session?.capacity !== null &&
     session !== null &&
+    session.capacity !== null &&
     session._count.signups >= session.capacity;
+  const showCapacity = session !== null && session.capacity !== null;
+  const capacity = showCapacity ? session.capacity : null;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/45 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
@@ -265,9 +277,9 @@ export default function SignupModal({
               </div>
 
               <div className="mx-auto mt-8 grid max-w-xl gap-4 border-t border-black/[0.08] pt-8 text-left sm:grid-cols-3">
-                <InfoBlock label="City" value={session.city} />
-                <InfoBlock label="Date" value={session.date} />
-                <InfoBlock label="Venue" value={session.venue} />
+                <InfoBlock label="City" value={session?.city ?? sessionCity} />
+                <InfoBlock label="Date" value={session?.date ?? "To be confirmed"} />
+                <InfoBlock label="Venue" value={session?.venue ?? "To be confirmed"} />
               </div>
             </div>
           ) : (
@@ -289,21 +301,21 @@ export default function SignupModal({
                   />
                 </div>
 
-                {session.capacity && (
+                {showCapacity && capacity !== null && (
                   <div className="mt-8 sm:mt-10">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.2em] text-[#171411]/45">
                         Spots
                       </span>
                       <span className="font-[family-name:var(--font-outfit)] text-xs text-[#171411]/55">
-                        {session._count.signups} / {session.capacity}
+                        {session._count.signups} / {capacity}
                       </span>
                     </div>
                     <div className="h-[2px] overflow-hidden bg-black/[0.08]">
                       <div
                         className="h-full bg-[#8B5CF6] transition-all duration-500"
                         style={{
-                          width: `${Math.min((session._count.signups / session.capacity) * 100, 100)}%`,
+                          width: `${Math.min((session._count.signups / capacity) * 100, 100)}%`,
                         }}
                       />
                     </div>
