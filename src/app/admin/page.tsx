@@ -1,13 +1,23 @@
+import type { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { verifyAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import AdminDashboardClient from "./dashboard-client";
 
+type SessionWithCount = Prisma.SessionGetPayload<{
+  include: { _count: { select: { signups: true } } };
+}>;
+
+type SignupWithSession = Prisma.SignupGetPayload<{
+  include: { session: true };
+}>;
+
 export default async function AdminPage() {
   const isAdmin = await verifyAdmin();
   if (!isAdmin) redirect("/admin/login");
 
-  const [sessions, signups] = await Promise.all([
+  const [sessions, signups]: [SessionWithCount[], SignupWithSession[]] =
+    await Promise.all([
     prisma.session.findMany({
       include: { _count: { select: { signups: true } } },
       orderBy: { createdAt: "desc" },
@@ -16,7 +26,7 @@ export default async function AdminPage() {
       include: { session: true },
       orderBy: { createdAt: "desc" },
     }),
-  ]);
+    ]);
 
   const totalSignups = signups.length;
   const checkedInCount = signups.filter((s) => s.checkedIn).length;

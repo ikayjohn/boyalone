@@ -69,6 +69,7 @@ export default function AdminDashboardClient({
       sessions.filter(
         (session) =>
           session.cityCode.toLowerCase() === "lag" ||
+          session.cityCode.toLowerCase() === "los" ||
           session.city.toLowerCase() === "lagos"
       ),
     [sessions]
@@ -145,7 +146,7 @@ export default function AdminDashboardClient({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total Signups" value={totalSignups} />
           <StatCard label="Checked In" value={checkedInCount} />
-          <StatCard label="Sessions" value={sessions.length} />
+          <StatCard label="Sessions" value={filterSessions.length} />
           <StatCard
             label="Check-in Rate"
             value={
