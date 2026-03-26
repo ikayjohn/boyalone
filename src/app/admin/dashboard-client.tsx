@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useMemo } from "react";
 
 interface SessionData {
@@ -126,6 +127,12 @@ export default function AdminDashboardClient({
           <p className="text-zinc-500 text-xs">Admin Dashboard</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/admin/check-in"
+            className="px-4 py-2 text-sm rounded-lg bg-white hover:bg-zinc-50 border border-zinc-300 transition-colors"
+          >
+            Check-In Desk
+          </Link>
           <button
             onClick={() => setShowAddSession(true)}
             className="px-4 py-2 text-sm rounded-lg bg-[#8B5CF6] text-white hover:bg-[#7C3AED] transition-colors cursor-pointer"

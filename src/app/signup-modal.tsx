@@ -16,7 +16,7 @@ export interface SessionInfo {
   _count: { signups: number };
 }
 
-interface SignupResult {
+export interface SignupResult {
   uniqueId: string;
   qrCodeData: string;
   fullName: string;
@@ -38,6 +38,73 @@ const BODY_ART_OPTIONS = [
   { value: "Piercing", label: "Piercing" },
   { value: "None", label: "None" },
 ];
+
+export function SignupSuccessView({
+  result,
+  session,
+  sessionCity,
+}: {
+  result: SignupResult;
+  session: SessionInfo | null;
+  sessionCity: string;
+}) {
+  return (
+    <div className="px-4 py-8 text-center sm:px-8 sm:py-14">
+      <div className="mx-auto mb-8 h-[2px] w-12 bg-[#8B5CF6]" />
+
+      <p className="font-[family-name:var(--font-outfit)] text-xs uppercase tracking-[0.3em] text-[#8B5CF6]">
+        You&apos;re In
+      </p>
+      <p className="mt-4 font-[family-name:var(--font-outfit)] text-sm uppercase tracking-[0.24em] text-[#171411]/45 sm:text-[0.95rem]">
+        Spirit Warehouse Session, Lagos
+      </p>
+      <h3 className="mt-4 font-[family-name:var(--font-playfair)] text-4xl text-[#171411] sm:text-5xl">
+        See you there,
+      </h3>
+      <p className="mt-2 font-[family-name:var(--font-playfair)] text-4xl italic text-[#171411]/80 sm:text-5xl">
+        {result.fullName.split(" ")[0]}
+      </p>
+
+      <div className="mt-10">
+        <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.2em] text-[#171411]/45">
+          Your Pass ID
+        </p>
+        <p className="mt-2 font-[family-name:var(--font-outfit)] text-2xl tracking-[0.15em] text-[#171411] sm:text-3xl">
+          {result.uniqueId}
+        </p>
+      </div>
+
+      <div className="mt-8 inline-block border border-black/[0.08] bg-white p-3 sm:p-4">
+        <Image
+          src={result.qrCodeData}
+          alt="Your entry QR code"
+          width={220}
+          height={220}
+          className="block"
+        />
+      </div>
+
+      <div className="mx-auto mt-8 max-w-xl border border-black/[0.08] bg-gradient-to-b from-black/[0.03] to-transparent px-5 py-5 text-center sm:px-6">
+        <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.22em] text-[#8B5CF6]/80">
+          Important
+        </p>
+        <p className="mt-3 font-[family-name:var(--font-playfair)] text-2xl text-[#171411] sm:text-[1.9rem]">
+          Screenshot this pass
+        </p>
+        <p className="mx-auto mt-3 max-w-lg font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/65">
+          Date and venue details will be sent via email and text before the
+          event.
+        </p>
+      </div>
+
+      <div className="mx-auto mt-8 grid max-w-xl gap-4 border-t border-black/[0.08] pt-8 text-center sm:grid-cols-3">
+        <InfoBlock label="City" value={session?.city ?? sessionCity} />
+        <InfoBlock label="Date" value={session?.date ?? "To be confirmed"} />
+        <InfoBlock label="Venue" value={session?.venue ?? "To be confirmed"} />
+      </div>
+    </div>
+  );
+}
 
 export default function SignupModal({
   isOpen,
@@ -237,51 +304,11 @@ export default function SignupModal({
               </p>
             </div>
           ) : result ? (
-            <div className="px-4 py-8 text-center sm:px-8 sm:py-14">
-              <div className="mx-auto mb-8 h-[2px] w-12 bg-[#8B5CF6]" />
-
-              <p className="font-[family-name:var(--font-outfit)] text-xs uppercase tracking-[0.3em] text-[#8B5CF6]">
-                You&apos;re In
-              </p>
-              <h3 className="mt-4 font-[family-name:var(--font-playfair)] text-4xl text-[#171411] sm:text-5xl">
-                See you there,
-              </h3>
-              <p className="mt-2 font-[family-name:var(--font-playfair)] text-4xl italic text-[#171411]/80 sm:text-5xl">
-                {result.fullName.split(" ")[0]}
-              </p>
-
-              <div className="mt-10">
-                <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.2em] text-[#171411]/45">
-                  Your Pass ID
-                </p>
-                <p className="mt-2 font-[family-name:var(--font-outfit)] text-2xl tracking-[0.15em] text-[#171411] sm:text-3xl">
-                  {result.uniqueId}
-                </p>
-              </div>
-
-              <div className="mt-8 inline-block border border-black/[0.08] bg-white p-3 sm:p-4">
-                <Image
-                  src={result.qrCodeData}
-                  alt="Your entry QR code"
-                  width={220}
-                  height={220}
-                  className="block"
-                />
-              </div>
-
-              <div className="mx-auto mt-8 max-w-xl border border-black/[0.08] bg-black/[0.02] px-4 py-4 sm:px-5">
-                <p className="font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
-                  Screenshot this pass. You&apos;ll need the QR code and pass ID at
-                  the door.
-                </p>
-              </div>
-
-              <div className="mx-auto mt-8 grid max-w-xl gap-4 border-t border-black/[0.08] pt-8 text-left sm:grid-cols-3">
-                <InfoBlock label="City" value={session?.city ?? sessionCity} />
-                <InfoBlock label="Date" value={session?.date ?? "To be confirmed"} />
-                <InfoBlock label="Venue" value={session?.venue ?? "To be confirmed"} />
-              </div>
-            </div>
+            <SignupSuccessView
+              result={result}
+              session={session}
+              sessionCity={sessionCity}
+            />
           ) : (
             <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
               <div className="border-b border-black/[0.08] px-4 py-6 sm:px-8 sm:py-8 lg:border-b-0 lg:border-r">
@@ -564,7 +591,7 @@ export default function SignupModal({
 
 function InfoBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="text-center">
       <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.2em] text-[#171411]/45">
         {label}
       </p>
