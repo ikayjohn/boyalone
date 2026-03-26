@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Playfair_Display, Outfit } from "next/font/google";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_BASE_URL || "https://boyalone.vercel.app";
+
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],
@@ -17,23 +20,46 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Omah Lay — Clarity of Mind | Listening Sessions",
   description:
-    "An exclusive listening experience for Omah Lay's album Clarity of Mind. Register for upcoming sessions in Lagos and explore past events in Berlin, Paris, and Ischgl.",
+    "Register for Omah Lay's Spirit Warehouse Session in Lagos, an exclusive Clarity of Mind listening experience with tattoos, body piercing, Q&A, and the official album release.",
   keywords: [
     "Omah Lay",
     "Clarity of Mind",
-    "listening session",
+    "Spirit Warehouse Session",
+    "Omah Lay Lagos",
+    "listening session Lagos",
     "Lagos",
     "Afrobeats",
     "album",
     "exclusive event",
   ],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Omah Lay — Clarity of Mind Listening Sessions",
+    title: "Omah Lay — Spirit Warehouse Session, Lagos",
     description:
-      "An exclusive listening experience for Clarity of Mind. Register now.",
+      "Register for Omah Lay's exclusive Spirit Warehouse Session in Lagos for Clarity of Mind.",
     type: "website",
+    url: "/",
+    siteName: "boy alone",
+    images: [
+      {
+        url: "/omah.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Omah Lay — Spirit Warehouse Session, Lagos",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Omah Lay — Spirit Warehouse Session, Lagos",
+    description:
+      "Register for Omah Lay's exclusive Spirit Warehouse Session in Lagos for Clarity of Mind.",
+    images: ["/omah.jpg"],
   },
 };
 
