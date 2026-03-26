@@ -509,6 +509,7 @@ export default function SignupModal({
                               className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
                             >
                               Instagram Handle
+                              <span className="ml-1 text-[#8B5CF6]">*</span>
                             </label>
                             <div className="relative">
                               <span className="absolute left-0 top-1/2 -translate-y-1/2 text-base text-[#171411]/35">
@@ -519,6 +520,7 @@ export default function SignupModal({
                                 type="text"
                                 value={instagram}
                                 onChange={(e) => setInstagram(e.target.value)}
+                                required
                                 placeholder="yourhandle"
                                 className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
                               />
@@ -531,6 +533,7 @@ export default function SignupModal({
                               className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
                             >
                               X Username
+                              <span className="ml-1 text-[#8B5CF6]">*</span>
                             </label>
                             <div className="relative">
                               <span className="absolute left-0 top-1/2 -translate-y-1/2 text-base text-[#171411]/35">
@@ -541,6 +544,7 @@ export default function SignupModal({
                                 type="text"
                                 value={xUsername}
                                 onChange={(e) => setXUsername(e.target.value)}
+                                required
                                 placeholder="yourusername"
                                 className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
                               />
@@ -553,6 +557,7 @@ export default function SignupModal({
                               className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
                             >
                               TikTok Username
+                              <span className="ml-1 text-[#8B5CF6]">*</span>
                             </label>
                             <div className="relative">
                               <span className="absolute left-0 top-1/2 -translate-y-1/2 text-base text-[#171411]/35">
@@ -563,6 +568,7 @@ export default function SignupModal({
                                 type="text"
                                 value={tiktokUsername}
                                 onChange={(e) => setTiktokUsername(e.target.value)}
+                                required
                                 placeholder="yourusername"
                                 className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
                               />
@@ -575,11 +581,13 @@ export default function SignupModal({
                               className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
                             >
                               What are you coming for?
+                              <span className="ml-1 text-[#8B5CF6]">*</span>
                             </label>
                             <select
                               id="bodyArtPreference"
                               value={bodyArtPreference}
                               onChange={(e) => setBodyArtPreference(e.target.value)}
+                              required
                               className="w-full appearance-none border-b border-black/[0.12] bg-transparent py-3 pr-8 font-[family-name:var(--font-outfit)] text-base text-[#171411] focus:border-[#8B5CF6] focus:outline-none"
                             >
                               {BODY_ART_OPTIONS.map((option) => (

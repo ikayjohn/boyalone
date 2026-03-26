@@ -419,7 +419,7 @@ export default function SignupPage() {
                   htmlFor="instagram"
                   className="block font-[family-name:var(--font-body)] text-[#999] text-xs tracking-[0.15em] uppercase mb-3"
                 >
-                  Instagram Handle
+                  Instagram Handle <span className="text-[#8B5CF6]">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 font-[family-name:var(--font-body)] text-[#666] text-base">
@@ -430,6 +430,7 @@ export default function SignupPage() {
                     type="text"
                     value={instagram}
                     onChange={(e) => setInstagram(e.target.value)}
+                    required
                     className="w-full bg-transparent border-b border-[#2A2A2A] text-white text-base py-3 pl-5 pr-0 font-[family-name:var(--font-body)] placeholder:text-[#333] focus:border-[#8B5CF6] focus:outline-none transition-colors"
                     placeholder="yourhandle"
                   />
@@ -442,7 +443,7 @@ export default function SignupPage() {
                   htmlFor="xUsername"
                   className="block font-[family-name:var(--font-body)] text-[#999] text-xs tracking-[0.15em] uppercase mb-3"
                 >
-                  X Username
+                  X Username <span className="text-[#8B5CF6]">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 font-[family-name:var(--font-body)] text-[#666] text-base">
@@ -453,6 +454,7 @@ export default function SignupPage() {
                     type="text"
                     value={xUsername}
                     onChange={(e) => setXUsername(e.target.value)}
+                    required
                     className="w-full bg-transparent border-b border-[#2A2A2A] text-white text-base py-3 pl-5 pr-0 font-[family-name:var(--font-body)] placeholder:text-[#333] focus:border-[#8B5CF6] focus:outline-none transition-colors"
                     placeholder="yourusername"
                   />
@@ -465,7 +467,7 @@ export default function SignupPage() {
                   htmlFor="tiktokUsername"
                   className="block font-[family-name:var(--font-body)] text-[#999] text-xs tracking-[0.15em] uppercase mb-3"
                 >
-                  TikTok Username
+                  TikTok Username <span className="text-[#8B5CF6]">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 font-[family-name:var(--font-body)] text-[#666] text-base">
@@ -476,6 +478,7 @@ export default function SignupPage() {
                     type="text"
                     value={tiktokUsername}
                     onChange={(e) => setTiktokUsername(e.target.value)}
+                    required
                     className="w-full bg-transparent border-b border-[#2A2A2A] text-white text-base py-3 pl-5 pr-0 font-[family-name:var(--font-body)] placeholder:text-[#333] focus:border-[#8B5CF6] focus:outline-none transition-colors"
                     placeholder="yourusername"
                   />
@@ -488,12 +491,14 @@ export default function SignupPage() {
                   htmlFor="bodyArtPreference"
                   className="block font-[family-name:var(--font-body)] text-[#999] text-xs tracking-[0.15em] uppercase mb-3"
                 >
-                  What are you coming for?
+                  What are you coming for?{" "}
+                  <span className="text-[#8B5CF6]">*</span>
                 </label>
                 <select
                   id="bodyArtPreference"
                   value={bodyArtPreference}
                   onChange={(e) => setBodyArtPreference(e.target.value)}
+                  required
                   className="w-full bg-transparent border-b border-[#2A2A2A] text-white text-base py-3 px-0 font-[family-name:var(--font-body)] focus:border-[#8B5CF6] focus:outline-none transition-colors appearance-none cursor-pointer"
                 >
                   {BODY_ART_OPTIONS.map((opt) => (

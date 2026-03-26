@@ -23,7 +23,17 @@ export async function POST(request: NextRequest) {
     const normalizedPhone = phone?.trim();
 
     // Validate required fields
-    if (!sessionCity || !fullName || !email || !phone || !city) {
+    if (
+      !sessionCity ||
+      !fullName ||
+      !email ||
+      !phone ||
+      !city ||
+      !instagram ||
+      !xUsername ||
+      !tiktokUsername ||
+      !bodyArtPreference
+    ) {
       return NextResponse.json(
         { error: "All required fields must be filled." },
         { status: 400 }
