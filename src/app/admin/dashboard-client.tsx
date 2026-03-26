@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+const SIGNUPS_PER_PAGE = 100;
 
 interface SessionData {
   id: number;
@@ -50,8 +52,10 @@ export default function AdminDashboardClient({
 }: Props) {
   const [search, setSearch] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedSignup, setSelectedSignup] = useState<SignupData | null>(null);
   const [showAddSession, setShowAddSession] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
   const [sessionForm, setSessionForm] = useState({
     city: "",
     cityCode: "",
@@ -90,6 +94,45 @@ export default function AdminDashboardClient({
     });
   }, [signups, search, sessionFilter]);
 
+  const tattooCount = useMemo(
+    () =>
+      signups.filter(
+        (signup) => signup.bodyArtPreference?.toLowerCase() === "tattoo"
+      ).length,
+    [signups]
+  );
+
+  const piercingCount = useMemo(
+    () =>
+      signups.filter(
+        (signup) => signup.bodyArtPreference?.toLowerCase() === "piercing"
+      ).length,
+    [signups]
+  );
+
+  const formatSelectionStat = (count: number) =>
+    `${count} (${totalSignups > 0 ? Math.round((count / totalSignups) * 100) : 0}%)`;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredSignups.length / SIGNUPS_PER_PAGE)
+  );
+
+  const paginatedSignups = useMemo(() => {
+    const start = (currentPage - 1) * SIGNUPS_PER_PAGE;
+    return filteredSignups.slice(start, start + SIGNUPS_PER_PAGE);
+  }, [currentPage, filteredSignups]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, sessionFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   async function handleAddSession(e: React.FormEvent) {
     e.preventDefault();
     setSessionFormLoading(true);
@@ -116,8 +159,9 @@ export default function AdminDashboardClient({
     }
   }
 
-  function handleExport() {
-    window.location.href = "/api/admin/export";
+  function handleExport(format: "xlsx" | "csv" | "json" | "pdf") {
+    window.location.href = `/api/admin/export?format=${format}`;
+    setShowExportOptions(false);
   }
 
   return (
@@ -141,18 +185,53 @@ export default function AdminDashboardClient({
           >
             Add Session
           </button>
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 text-sm rounded-lg bg-white hover:bg-zinc-50 border border-zinc-300 transition-colors cursor-pointer"
-          >
-            Export to Excel
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExportOptions((current) => !current)}
+              className="px-4 py-2 text-sm rounded-lg bg-white hover:bg-zinc-50 border border-zinc-300 transition-colors cursor-pointer"
+            >
+              Export
+            </button>
+            {showExportOptions ? (
+              <div className="absolute right-0 top-full z-20 mt-2 min-w-[180px] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
+                <button
+                  type="button"
+                  onClick={() => handleExport("xlsx")}
+                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                >
+                  Export as Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("csv")}
+                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                >
+                  Export as CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("json")}
+                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                >
+                  Export as JSON
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("pdf")}
+                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                >
+                  Export as PDF
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
       <div className="p-6 max-w-[1400px] mx-auto space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
           <StatCard label="Total Signups" value={totalSignups} />
           <StatCard label="Checked In" value={checkedInCount} />
           <StatCard label="Sessions" value={filterSessions.length} />
@@ -163,6 +242,14 @@ export default function AdminDashboardClient({
                 ? `${Math.round((checkedInCount / totalSignups) * 100)}%`
                 : "0%"
             }
+          />
+          <StatCard
+            label="Tattoo"
+            value={formatSelectionStat(tattooCount)}
+          />
+          <StatCard
+            label="Body Piercing"
+            value={formatSelectionStat(piercingCount)}
           />
         </div>
 
@@ -228,6 +315,20 @@ export default function AdminDashboardClient({
 
         {/* Table */}
         <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Showing{" "}
+              {filteredSignups.length === 0
+                ? 0
+                : (currentPage - 1) * SIGNUPS_PER_PAGE + 1}
+              {" - "}
+              {Math.min(currentPage * SIGNUPS_PER_PAGE, filteredSignups.length)}{" "}
+              of {filteredSignups.length} filtered signups
+            </span>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -261,7 +362,7 @@ export default function AdminDashboardClient({
                     </td>
                   </tr>
                 ) : (
-                  filteredSignups.map((s) => (
+                  paginatedSignups.map((s) => (
                     <tr
                       key={s.id}
                       onClick={() => setSelectedSignup(s)}
@@ -302,8 +403,39 @@ export default function AdminDashboardClient({
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-3 border-t border-zinc-200 text-xs text-zinc-500">
-            Showing {filteredSignups.length} of {signups.length} signups
+          <div className="flex flex-col gap-3 border-t border-zinc-200 px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Showing{" "}
+              {filteredSignups.length === 0
+                ? 0
+                : (currentPage - 1) * SIGNUPS_PER_PAGE + 1}
+              {" - "}
+              {Math.min(currentPage * SIGNUPS_PER_PAGE, filteredSignups.length)}{" "}
+              of {filteredSignups.length} filtered signups
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+                disabled={currentPage === 1}
+                className="rounded border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(page + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="rounded border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </div>
