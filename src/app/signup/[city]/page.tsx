@@ -24,12 +24,11 @@ interface SignupResult {
   fullName: string;
 }
 
-const REFERRAL_OPTIONS = [
+const BODY_ART_OPTIONS = [
   { value: "", label: "Select one..." },
-  { value: "Social Media", label: "Social Media" },
-  { value: "Friend", label: "Friend" },
-  { value: "Blog/Press", label: "Blog / Press" },
-  { value: "Other", label: "Other" },
+  { value: "Tattoo", label: "Tattoo" },
+  { value: "Piercing", label: "Piercing" },
+  { value: "None", label: "None" },
 ];
 
 export default function SignupPage() {
@@ -48,7 +47,9 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [userCity, setUserCity] = useState("");
   const [instagram, setInstagram] = useState("");
-  const [referralSource, setReferralSource] = useState("");
+  const [xUsername, setXUsername] = useState("");
+  const [tiktokUsername, setTiktokUsername] = useState("");
+  const [bodyArtPreference, setBodyArtPreference] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
@@ -83,7 +84,9 @@ export default function SignupPage() {
           phone,
           city: userCity,
           instagram: instagram.replace(/^@/, ""),
-          referralSource: referralSource || null,
+          xUsername: xUsername.replace(/^@/, ""),
+          tiktokUsername: tiktokUsername.replace(/^@/, ""),
+          bodyArtPreference: bodyArtPreference || null,
           agreedToTerms,
         }),
       });
@@ -433,21 +436,67 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Referral Source */}
+              {/* X Username */}
               <div>
                 <label
-                  htmlFor="referralSource"
+                  htmlFor="xUsername"
                   className="block font-[family-name:var(--font-body)] text-[#999] text-xs tracking-[0.15em] uppercase mb-3"
                 >
-                  How did you hear about this?
+                  X Username
+                </label>
+                <div className="relative">
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 font-[family-name:var(--font-body)] text-[#666] text-base">
+                    @
+                  </span>
+                  <input
+                    id="xUsername"
+                    type="text"
+                    value={xUsername}
+                    onChange={(e) => setXUsername(e.target.value)}
+                    className="w-full bg-transparent border-b border-[#2A2A2A] text-white text-base py-3 pl-5 pr-0 font-[family-name:var(--font-body)] placeholder:text-[#333] focus:border-[#8B5CF6] focus:outline-none transition-colors"
+                    placeholder="yourusername"
+                  />
+                </div>
+              </div>
+
+              {/* TikTok Username */}
+              <div>
+                <label
+                  htmlFor="tiktokUsername"
+                  className="block font-[family-name:var(--font-body)] text-[#999] text-xs tracking-[0.15em] uppercase mb-3"
+                >
+                  TikTok Username
+                </label>
+                <div className="relative">
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 font-[family-name:var(--font-body)] text-[#666] text-base">
+                    @
+                  </span>
+                  <input
+                    id="tiktokUsername"
+                    type="text"
+                    value={tiktokUsername}
+                    onChange={(e) => setTiktokUsername(e.target.value)}
+                    className="w-full bg-transparent border-b border-[#2A2A2A] text-white text-base py-3 pl-5 pr-0 font-[family-name:var(--font-body)] placeholder:text-[#333] focus:border-[#8B5CF6] focus:outline-none transition-colors"
+                    placeholder="yourusername"
+                  />
+                </div>
+              </div>
+
+              {/* Body Art Preference */}
+              <div>
+                <label
+                  htmlFor="bodyArtPreference"
+                  className="block font-[family-name:var(--font-body)] text-[#999] text-xs tracking-[0.15em] uppercase mb-3"
+                >
+                  What are you coming for?
                 </label>
                 <select
-                  id="referralSource"
-                  value={referralSource}
-                  onChange={(e) => setReferralSource(e.target.value)}
+                  id="bodyArtPreference"
+                  value={bodyArtPreference}
+                  onChange={(e) => setBodyArtPreference(e.target.value)}
                   className="w-full bg-transparent border-b border-[#2A2A2A] text-white text-base py-3 px-0 font-[family-name:var(--font-body)] focus:border-[#8B5CF6] focus:outline-none transition-colors appearance-none cursor-pointer"
                 >
-                  {REFERRAL_OPTIONS.map((opt) => (
+                  {BODY_ART_OPTIONS.map((opt) => (
                     <option
                       key={opt.value}
                       value={opt.value}

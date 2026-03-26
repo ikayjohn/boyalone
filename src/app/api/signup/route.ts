@@ -14,8 +14,9 @@ export async function POST(request: NextRequest) {
       phone,
       city,
       instagram,
+      xUsername,
+      tiktokUsername,
       bodyArtPreference,
-      referralSource,
       agreedToTerms,
     } = body;
     const normalizedEmail = email?.trim().toLowerCase();
@@ -124,7 +125,9 @@ export async function POST(request: NextRequest) {
             phone: normalizedPhone,
             city: city.trim(),
             instagram: instagram?.trim() || null,
-            referralSource: bodyArtPreference || referralSource || null,
+            xUsername: xUsername?.trim().replace(/^@/, "") || null,
+            tiktokUsername: tiktokUsername?.trim().replace(/^@/, "") || null,
+            bodyArtPreference: bodyArtPreference || null,
             agreedToTerms: true,
             qrCodeData,
           },

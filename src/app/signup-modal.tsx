@@ -124,6 +124,8 @@ export default function SignupModal({
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [xUsername, setXUsername] = useState("");
+  const [tiktokUsername, setTiktokUsername] = useState("");
   const [bodyArtPreference, setBodyArtPreference] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [presaveStarted, setPresaveStarted] = useState(false);
@@ -138,6 +140,8 @@ export default function SignupModal({
     setPhone("");
     setCity("");
     setInstagram("");
+    setXUsername("");
+    setTiktokUsername("");
     setBodyArtPreference("");
     setAgreedToTerms(false);
     setPresaveStarted(false);
@@ -237,6 +241,8 @@ export default function SignupModal({
           phone,
           city,
           instagram: instagram.replace(/^@/, ""),
+          xUsername: xUsername.replace(/^@/, ""),
+          tiktokUsername: tiktokUsername.replace(/^@/, ""),
           bodyArtPreference: bodyArtPreference || null,
           agreedToTerms,
         }),
@@ -514,6 +520,50 @@ export default function SignupModal({
                                 value={instagram}
                                 onChange={(e) => setInstagram(e.target.value)}
                                 placeholder="yourhandle"
+                                className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="xUsername"
+                              className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
+                            >
+                              X Username
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 text-base text-[#171411]/35">
+                                @
+                              </span>
+                              <input
+                                id="xUsername"
+                                type="text"
+                                value={xUsername}
+                                onChange={(e) => setXUsername(e.target.value)}
+                                placeholder="yourusername"
+                                className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="tiktokUsername"
+                              className="mb-3 block font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.15em] text-[#171411]/45"
+                            >
+                              TikTok Username
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-0 top-1/2 -translate-y-1/2 text-base text-[#171411]/35">
+                                @
+                              </span>
+                              <input
+                                id="tiktokUsername"
+                                type="text"
+                                value={tiktokUsername}
+                                onChange={(e) => setTiktokUsername(e.target.value)}
+                                placeholder="yourusername"
                                 className="w-full border-b border-black/[0.12] bg-transparent py-3 pl-5 pr-0 font-[family-name:var(--font-outfit)] text-base text-[#171411] placeholder:text-[#171411]/25 focus:border-[#8B5CF6] focus:outline-none"
                               />
                             </div>

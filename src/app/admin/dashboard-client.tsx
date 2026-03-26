@@ -24,7 +24,9 @@ interface SignupData {
   phone: string;
   city: string;
   instagram: string | null;
-  referralSource: string | null;
+  xUsername: string | null;
+  tiktokUsername: string | null;
+  bodyArtPreference: string | null;
   checkedIn: boolean;
   checkedInAt: string | null;
   qrCodeData: string | null;
@@ -337,8 +339,16 @@ export default function AdminDashboardClient({
                 value={selectedSignup.instagram || "—"}
               />
               <Detail
-                label="Referral Source"
-                value={selectedSignup.referralSource || "—"}
+                label="X"
+                value={selectedSignup.xUsername || "—"}
+              />
+              <Detail
+                label="TikTok"
+                value={selectedSignup.tiktokUsername || "—"}
+              />
+              <Detail
+                label="Body Art Preference"
+                value={selectedSignup.bodyArtPreference || "—"}
               />
               <Detail label="Session" value={selectedSignup.sessionCity} />
               <Detail
