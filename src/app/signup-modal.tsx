@@ -320,9 +320,18 @@ export default function SignupModal({
                 </h3>
 
                 <div className="mt-6 space-y-4 sm:mt-8 sm:space-y-5">
-                  <InfoBlock label="Date" value={session?.date ?? "Loading..."} />
-                  <InfoBlock label="Venue" value={session?.venue ?? "Loading..."} />
                   <InfoBlock
+                    align="left"
+                    label="Date"
+                    value={session?.date ?? "Loading..."}
+                  />
+                  <InfoBlock
+                    align="left"
+                    label="Venue"
+                    value={session?.venue ?? "Loading..."}
+                  />
+                  <InfoBlock
+                    align="left"
                     label="Country"
                     value={session?.country ?? "Loading..."}
                   />
@@ -372,9 +381,9 @@ export default function SignupModal({
                       Before You Register
                     </h3>
                     <p className="mt-2 font-[family-name:var(--font-outfit)] text-sm text-[#171411]/50">
-                      To be considered for the session, you need to pre-save{" "}
-                      <span className="text-[#171411]/80">Clarity of Mind</span>{" "}
-                      first. Once you do that, we&apos;ll open up the form here.
+                      To be invited, you must pre-save{" "}
+                      <span className="text-[#171411]/80">Clarity of Mind</span>.
+                      Once done, the form will unlock here.
                     </p>
 
                     {error && (
@@ -399,9 +408,13 @@ export default function SignupModal({
                         Heads Up
                       </p>
                       <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
-                        This invite is for people who&apos;ve already shown love
-                        to the project. Hit the official pre-save link below and
-                        we&apos;ll unlock the registration form right after.
+                        This is intimate and exclusive. A limited number of
+                        spirits will be invited. If you receive one, you&apos;re
+                        meant to be there.
+                      </p>
+                      <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
+                        Hit the pre-save link below and we&apos;ll unlock the
+                        registration form right after.
                       </p>
                     </div>
 
@@ -589,9 +602,17 @@ export default function SignupModal({
   );
 }
 
-function InfoBlock({ label, value }: { label: string; value: string }) {
+function InfoBlock({
+  label,
+  value,
+  align = "center",
+}: {
+  label: string;
+  value: string;
+  align?: "left" | "center";
+}) {
   return (
-    <div className="text-center">
+    <div className={align === "left" ? "text-left" : "text-center"}>
       <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.2em] text-[#171411]/45">
         {label}
       </p>
