@@ -10,6 +10,7 @@ const previewSession: SessionInfo = {
   status: "upcoming",
   imageUrl: null,
   capacity: 150,
+  registrationEnabled: true,
   _count: { signups: 83 },
 };
 

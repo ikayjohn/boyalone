@@ -1,13 +1,22 @@
 import { redirect } from "next/navigation";
 import { verifyAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { DEFAULT_SITE_CONTENT, normalizeSiteContent } from "@/lib/site-content";
 import AdminDashboardClient from "./dashboard-client";
 
 export default async function AdminPage() {
   const isAdmin = await verifyAdmin();
   if (!isAdmin) redirect("/admin/login");
 
-  const [sessions, signups, groupedAnalytics, uniqueVisitors, attributionEvents] = await Promise.all([
+  const [
+    sessions,
+    signups,
+    groupedAnalytics,
+    uniqueVisitors,
+    attributionEvents,
+    siteContent,
+    savedFilters,
+  ] = await Promise.all([
     prisma.session.findMany({
       include: { _count: { select: { signups: true } } },
       orderBy: { createdAt: "desc" },
@@ -40,6 +49,12 @@ export default async function AdminPage() {
       orderBy: {
         createdAt: "desc",
       },
+    }),
+    prisma.siteContent.findUnique({
+      where: { key: "homepage" },
+    }),
+    prisma.savedSignupFilter.findMany({
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -92,6 +107,7 @@ export default async function AdminPage() {
     status: s.status,
     imageUrl: s.imageUrl,
     capacity: s.capacity,
+    registrationEnabled: s.registrationEnabled,
     signupCount: s._count.signups,
   }));
 
@@ -112,6 +128,7 @@ export default async function AdminPage() {
     createdAt: s.createdAt.toISOString(),
     sessionCity: s.session.city,
     sessionCityCode: s.session.cityCode,
+    utmSource: s.utmSource,
   }));
 
   return (
@@ -120,6 +137,17 @@ export default async function AdminPage() {
       signups={serializedSignups}
       totalSignups={totalSignups}
       checkedInCount={checkedInCount}
+      siteContent={siteContent ? normalizeSiteContent(siteContent) : DEFAULT_SITE_CONTENT}
+      savedFilters={savedFilters.map((filter) => ({
+        id: filter.id,
+        name: filter.name,
+        search: filter.search,
+        sessionCityCode: filter.sessionCityCode,
+        checkedIn:
+          typeof filter.checkedIn === "boolean" ? filter.checkedIn : null,
+        bodyArtPreference: filter.bodyArtPreference,
+        utmSource: filter.utmSource,
+      }))}
       analyticsSummary={{
         homepageVisits,
         uniqueVisitors: uniqueVisitors.length,

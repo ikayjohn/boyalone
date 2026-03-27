@@ -7,18 +7,19 @@ datasource db {
 }
 
 model Session {
-  id        Int      @id @default(autoincrement())
-  city      String   @db.VarChar(100)
-  cityCode  String   @map("city_code") @db.VarChar(5)
-  country   String   @db.VarChar(100)
-  date      String   @default("TBA") @db.VarChar(100)
-  venue     String   @default("TBA") @db.VarChar(255)
-  status    String   @default("upcoming") @db.VarChar(20)
-  imageUrl  String?  @map("image_url") @db.VarChar(500)
-  capacity  Int?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @map("updated_at")
-  signups   Signup[]
+  id                  Int      @id @default(autoincrement())
+  city                String   @db.VarChar(100)
+  cityCode            String   @map("city_code") @db.VarChar(5)
+  country             String   @db.VarChar(100)
+  date                String   @default("TBA") @db.VarChar(100)
+  venue               String   @default("TBA") @db.VarChar(255)
+  status              String   @default("upcoming") @db.VarChar(20)
+  imageUrl            String?  @map("image_url") @db.VarChar(500)
+  capacity            Int?
+  registrationEnabled Boolean  @default(true) @map("registration_enabled")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @map("updated_at")
+  signups             Signup[]
 
   @@map("sessions")
 }
@@ -45,25 +46,62 @@ model AnalyticsEvent {
 }
 
 model Signup {
-  id             Int       @id @default(autoincrement())
-  uniqueId       String    @unique @map("unique_id") @db.VarChar(20)
-  sessionId      Int       @map("session_id")
-  fullName       String    @map("full_name") @db.VarChar(255)
-  email          String    @db.VarChar(255)
-  phone          String    @db.VarChar(50)
-  city           String    @db.VarChar(100)
-  instagram      String?   @db.VarChar(100)
-  xUsername      String?   @map("x_username") @db.VarChar(100)
-  tiktokUsername String?   @map("tiktok_username") @db.VarChar(100)
+  id                Int       @id @default(autoincrement())
+  uniqueId          String    @unique @map("unique_id") @db.VarChar(20)
+  sessionId         Int       @map("session_id")
+  fullName          String    @map("full_name") @db.VarChar(255)
+  email             String    @db.VarChar(255)
+  phone             String    @db.VarChar(50)
+  city              String    @db.VarChar(100)
+  instagram         String?   @db.VarChar(100)
+  xUsername         String?   @map("x_username") @db.VarChar(100)
+  tiktokUsername    String?   @map("tiktok_username") @db.VarChar(100)
   bodyArtPreference String? @map("body_art_preference") @db.VarChar(50)
-  agreedToTerms  Boolean   @default(false) @map("agreed_to_terms")
-  checkedIn      Boolean   @default(false) @map("checked_in")
-  checkedInAt    DateTime? @map("checked_in_at")
-  qrCodeData     String?   @map("qr_code_data") @db.Text
-  createdAt      DateTime  @default(now()) @map("created_at")
-  session        Session   @relation(fields: [sessionId], references: [id])
+  agreedToTerms     Boolean   @default(false) @map("agreed_to_terms")
+  checkedIn         Boolean   @default(false) @map("checked_in")
+  checkedInAt       DateTime? @map("checked_in_at")
+  qrCodeData        String?   @map("qr_code_data") @db.Text
+  analyticsVisitorId String?  @map("analytics_visitor_id") @db.VarChar(100)
+  analyticsSessionId String?  @map("analytics_session_id") @db.VarChar(100)
+  utmSource         String?   @map("utm_source") @db.VarChar(255)
+  utmMedium         String?   @map("utm_medium") @db.VarChar(255)
+  utmCampaign       String?   @map("utm_campaign") @db.VarChar(255)
+  utmTerm           String?   @map("utm_term") @db.VarChar(255)
+  utmContent        String?   @map("utm_content") @db.VarChar(255)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  session           Session   @relation(fields: [sessionId], references: [id])
 
   @@index([sessionId])
   @@index([email])
   @@map("signups")
+}
+
+model SavedSignupFilter {
+  id                Int      @id @default(autoincrement())
+  name              String   @db.VarChar(100)
+  search            String?  @db.VarChar(255)
+  sessionCityCode   String?  @map("session_city_code") @db.VarChar(10)
+  checkedIn         Boolean? @map("checked_in")
+  bodyArtPreference String?  @map("body_art_preference") @db.VarChar(50)
+  utmSource         String?  @map("utm_source") @db.VarChar(255)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @map("updated_at")
+
+  @@map("saved_signup_filters")
+}
+
+model SiteContent {
+  id             Int      @id @default(autoincrement())
+  key            String   @unique @db.VarChar(50)
+  heroLine1      String   @map("hero_line_1") @db.VarChar(100)
+  heroLine2      String   @map("hero_line_2") @db.VarChar(100)
+  heroLine3      String   @map("hero_line_3") @db.VarChar(100)
+  heroAccent     String   @map("hero_accent") @db.VarChar(100)
+  heroSubtitle   String   @map("hero_subtitle") @db.VarChar(500)
+  heroVideoUrl   String   @map("hero_video_url") @db.VarChar(500)
+  presaveUrl     String   @map("presave_url") @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @map("updated_at")
+
+  @@map("site_content")
 }

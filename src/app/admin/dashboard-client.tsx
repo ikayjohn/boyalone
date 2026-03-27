@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { SiteContentPayload } from "@/lib/site-content";
 
 const SIGNUPS_PER_PAGE = 100;
 
@@ -15,6 +16,7 @@ interface SessionData {
   status: string;
   imageUrl: string | null;
   capacity: number | null;
+  registrationEnabled: boolean;
   signupCount: number;
 }
 
@@ -35,6 +37,17 @@ interface SignupData {
   createdAt: string;
   sessionCity: string;
   sessionCityCode: string;
+  utmSource: string | null;
+}
+
+interface SavedFilterData {
+  id: number;
+  name: string;
+  search: string | null;
+  sessionCityCode: string | null;
+  checkedIn: boolean | null;
+  bodyArtPreference: string | null;
+  utmSource: string | null;
 }
 
 interface Props {
@@ -42,6 +55,8 @@ interface Props {
   signups: SignupData[];
   totalSignups: number;
   checkedInCount: number;
+  siteContent: SiteContentPayload;
+  savedFilters: SavedFilterData[];
   analyticsSummary: {
     homepageVisits: number;
     uniqueVisitors: number;
@@ -51,26 +66,37 @@ interface Props {
     formUnlocks: number;
     signupCompletions: number;
     visitToSignupRate: string;
-    topAttribution: Array<{
-      label: string;
-      count: number;
-    }>;
+    topAttribution: Array<{ label: string; count: number }>;
   };
 }
+
+type CheckedInFilter = "all" | "true" | "false";
 
 export default function AdminDashboardClient({
   sessions,
   signups,
   totalSignups,
   checkedInCount,
+  siteContent,
+  savedFilters,
   analyticsSummary,
 }: Props) {
   const [search, setSearch] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
+  const [checkedInFilter, setCheckedInFilter] =
+    useState<CheckedInFilter>("all");
+  const [bodyArtFilter, setBodyArtFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSignup, setSelectedSignup] = useState<SignupData | null>(null);
+  const [editingSession, setEditingSession] = useState<SessionData | null>(null);
   const [showAddSession, setShowAddSession] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [filterSaving, setFilterSaving] = useState(false);
+  const [sessionSaving, setSessionSaving] = useState(false);
+  const [contentSaving, setContentSaving] = useState(false);
+  const [sessionFormLoading, setSessionFormLoading] = useState(false);
+  const [contentForm, setContentForm] = useState(siteContent);
   const [sessionForm, setSessionForm] = useState({
     city: "",
     cityCode: "",
@@ -79,74 +105,96 @@ export default function AdminDashboardClient({
     venue: "",
     status: "upcoming",
   });
-  const [sessionFormLoading, setSessionFormLoading] = useState(false);
 
-  const sessionsWithSignups = useMemo(
-    () => sessions.filter((session) => session.signupCount > 0),
-    [sessions]
+  useEffect(() => setContentForm(siteContent), [siteContent]);
+  useEffect(
+    () => setCurrentPage(1),
+    [search, sessionFilter, checkedInFilter, bodyArtFilter, sourceFilter]
   );
 
-  const filterSessions = useMemo(
+  const sourceOptions = useMemo(
     () =>
-      sessions.filter(
-        (session) =>
-          session.cityCode.toLowerCase() === "lag" ||
-          session.cityCode.toLowerCase() === "los" ||
-          session.city.toLowerCase() === "lagos"
-      ),
-    [sessions]
-  );
-
-  const filteredSignups = useMemo(() => {
-    return signups.filter((s) => {
-      const matchesSearch =
-        !search ||
-        s.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        s.email.toLowerCase().includes(search.toLowerCase());
-      const matchesSession =
-        !sessionFilter || s.sessionCityCode === sessionFilter;
-      return matchesSearch && matchesSession;
-    });
-  }, [signups, search, sessionFilter]);
-
-  const tattooCount = useMemo(
-    () =>
-      signups.filter(
-        (signup) => signup.bodyArtPreference?.toLowerCase() === "tattoo"
-      ).length,
+      Array.from(new Set(signups.map((signup) => signup.utmSource).filter(Boolean)))
+        .sort() as string[],
     [signups]
   );
 
-  const piercingCount = useMemo(
+  const filteredSignups = useMemo(
     () =>
-      signups.filter(
-        (signup) => signup.bodyArtPreference?.toLowerCase() === "piercing"
-      ).length,
-    [signups]
+      signups.filter((signup) => {
+        const query = search.toLowerCase();
+        const matchesSearch =
+          !query ||
+          signup.fullName.toLowerCase().includes(query) ||
+          signup.email.toLowerCase().includes(query) ||
+          signup.phone.toLowerCase().includes(query) ||
+          signup.uniqueId.toLowerCase().includes(query);
+        const matchesSession =
+          !sessionFilter || signup.sessionCityCode === sessionFilter;
+        const matchesCheckedIn =
+          checkedInFilter === "all" ||
+          (checkedInFilter === "true" && signup.checkedIn) ||
+          (checkedInFilter === "false" && !signup.checkedIn);
+        const matchesBodyArt =
+          bodyArtFilter === "all" ||
+          signup.bodyArtPreference?.toLowerCase() === bodyArtFilter.toLowerCase();
+        const matchesSource =
+          sourceFilter === "all" ||
+          (signup.utmSource || "").toLowerCase() === sourceFilter.toLowerCase();
+
+        return (
+          matchesSearch &&
+          matchesSession &&
+          matchesCheckedIn &&
+          matchesBodyArt &&
+          matchesSource
+        );
+      }),
+    [signups, search, sessionFilter, checkedInFilter, bodyArtFilter, sourceFilter]
   );
 
-  const formatSelectionStat = (count: number) =>
-    `${count} (${totalSignups > 0 ? Math.round((count / totalSignups) * 100) : 0}%)`;
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredSignups.length / SIGNUPS_PER_PAGE)
-  );
-
+  const totalPages = Math.max(1, Math.ceil(filteredSignups.length / SIGNUPS_PER_PAGE));
   const paginatedSignups = useMemo(() => {
     const start = (currentPage - 1) * SIGNUPS_PER_PAGE;
     return filteredSignups.slice(start, start + SIGNUPS_PER_PAGE);
   }, [currentPage, filteredSignups]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, sessionFilter]);
-
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  const tattooCount = signups.filter(
+    (signup) => signup.bodyArtPreference?.toLowerCase() === "tattoo"
+  ).length;
+  const piercingCount = signups.filter(
+    (signup) => signup.bodyArtPreference?.toLowerCase() === "piercing"
+  ).length;
+  const lagosSessionsCount = sessions.filter(
+    (session) =>
+      session.city.toLowerCase() === "lagos" ||
+      session.cityCode.toLowerCase() === "lag" ||
+      session.cityCode.toLowerCase() === "los"
+  ).length;
+
+  const formatSelectionStat = (count: number) =>
+    `${count} (${totalSignups > 0 ? Math.round((count / totalSignups) * 100) : 0}%)`;
+
+  function buildExportQuery() {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (sessionFilter) params.set("session", sessionFilter);
+    if (checkedInFilter !== "all") params.set("checkedIn", checkedInFilter);
+    if (bodyArtFilter !== "all") params.set("bodyArtPreference", bodyArtFilter);
+    if (sourceFilter !== "all") params.set("utmSource", sourceFilter);
+    return params.toString();
+  }
+
+  function handleExport(format: "xlsx" | "csv" | "json" | "pdf") {
+    const query = buildExportQuery();
+    window.location.href = `/api/admin/export?format=${format}${query ? `&${query}` : ""}`;
+    setShowExportOptions(false);
+  }
 
   async function handleAddSession(e: React.FormEvent) {
     e.preventDefault();
@@ -157,46 +205,111 @@ export default function AdminDashboardClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sessionForm),
       });
-      if (res.ok) {
-        setShowAddSession(false);
-        setSessionForm({
-          city: "",
-          cityCode: "",
-          country: "",
-          date: "",
-          venue: "",
-          status: "upcoming",
-        });
-        window.location.reload();
-      }
+      if (res.ok) window.location.reload();
     } finally {
       setSessionFormLoading(false);
     }
   }
 
-  function handleExport(format: "xlsx" | "csv" | "json" | "pdf") {
-    window.location.href = `/api/admin/export?format=${format}`;
-    setShowExportOptions(false);
+  async function handleSaveContent(e: React.FormEvent) {
+    e.preventDefault();
+    setContentSaving(true);
+    try {
+      const res = await fetch("/api/admin/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contentForm),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setContentSaving(false);
+    }
+  }
+
+  async function handleSaveFilter() {
+    const name = window.prompt("Name this saved list");
+    if (!name) return;
+    setFilterSaving(true);
+    try {
+      const res = await fetch("/api/admin/filters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          search: search || null,
+          sessionCityCode: sessionFilter || null,
+          checkedIn:
+            checkedInFilter === "all" ? null : checkedInFilter === "true",
+          bodyArtPreference: bodyArtFilter === "all" ? null : bodyArtFilter,
+          utmSource: sourceFilter === "all" ? null : sourceFilter,
+        }),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setFilterSaving(false);
+    }
+  }
+
+  async function handleDeleteFilter(id: number) {
+    if (!window.confirm("Delete this saved list?")) return;
+    await fetch(`/api/admin/filters/${id}`, { method: "DELETE" });
+    window.location.reload();
+  }
+
+  function applyFilter(filter: SavedFilterData) {
+    setSearch(filter.search || "");
+    setSessionFilter(filter.sessionCityCode || "");
+    setCheckedInFilter(
+      filter.checkedIn === null ? "all" : filter.checkedIn ? "true" : "false"
+    );
+    setBodyArtFilter(filter.bodyArtPreference || "all");
+    setSourceFilter(filter.utmSource || "all");
+  }
+
+  async function handleToggleRegistration(session: SessionData) {
+    await fetch(`/api/admin/sessions/${session.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        registrationEnabled: !session.registrationEnabled,
+      }),
+    });
+    window.location.reload();
+  }
+
+  async function handleSaveSession(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingSession) return;
+    setSessionSaving(true);
+    try {
+      const res = await fetch(`/api/admin/sessions/${editingSession.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingSession),
+      });
+      if (res.ok) window.location.reload();
+    } finally {
+      setSessionSaving(false);
+    }
   }
 
   return (
     <div className="min-h-screen bg-[#f6f3ef] text-zinc-900">
-      {/* Header */}
-      <header className="border-b border-zinc-200 bg-white/90 px-6 py-4 backdrop-blur flex items-center justify-between">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white/90 px-6 py-4 backdrop-blur">
         <div>
           <h1 className="text-xl font-bold tracking-tight">boy alone</h1>
-          <p className="text-zinc-500 text-xs">Admin Dashboard</p>
+          <p className="text-xs text-zinc-500">Admin Dashboard</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
             href="/admin/check-in"
-            className="px-4 py-2 text-sm rounded-lg bg-white hover:bg-zinc-50 border border-zinc-300 transition-colors"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50"
           >
             Check-In Desk
           </Link>
           <button
             onClick={() => setShowAddSession(true)}
-            className="px-4 py-2 text-sm rounded-lg bg-[#8B5CF6] text-white hover:bg-[#7C3AED] transition-colors cursor-pointer"
+            className="cursor-pointer rounded-lg bg-[#8B5CF6] px-4 py-2 text-sm text-white hover:bg-[#7C3AED]"
           >
             Add Session
           </button>
@@ -204,68 +317,39 @@ export default function AdminDashboardClient({
             <button
               type="button"
               onClick={() => setShowExportOptions((current) => !current)}
-              className="px-4 py-2 text-sm rounded-lg bg-white hover:bg-zinc-50 border border-zinc-300 transition-colors cursor-pointer"
+              className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50"
             >
               Export
             </button>
             {showExportOptions ? (
-              <div className="absolute right-0 top-full z-20 mt-2 min-w-[180px] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => handleExport("xlsx")}
-                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                >
-                  Export as Excel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleExport("csv")}
-                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                >
-                  Export as CSV
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleExport("json")}
-                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                >
-                  Export as JSON
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleExport("pdf")}
-                  className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
-                >
-                  Export as PDF
-                </button>
+              <div className="absolute right-0 top-full z-20 mt-2 min-w-[180px] rounded-lg border border-zinc-200 bg-white shadow-lg">
+                {(["xlsx", "csv", "json", "pdf"] as const).map((format) => (
+                  <button
+                    key={format}
+                    type="button"
+                    onClick={() => handleExport(format)}
+                    className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+                  >
+                    Export as {format.toUpperCase()}
+                  </button>
+                ))}
               </div>
             ) : null}
           </div>
         </div>
       </header>
 
-      <div className="p-6 max-w-[1400px] mx-auto space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="mx-auto max-w-[1450px] space-y-6 p-6">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
           <StatCard label="Total Signups" value={totalSignups} />
           <StatCard label="Checked In" value={checkedInCount} />
-          <StatCard label="Sessions" value={filterSessions.length} />
+          <StatCard label="Sessions" value={lagosSessionsCount} />
           <StatCard
             label="Check-in Rate"
-            value={
-              totalSignups > 0
-                ? `${Math.round((checkedInCount / totalSignups) * 100)}%`
-                : "0%"
-            }
+            value={totalSignups ? `${Math.round((checkedInCount / totalSignups) * 100)}%` : "0%"}
           />
-          <StatCard
-            label="Tattoo"
-            value={formatSelectionStat(tattooCount)}
-          />
-          <StatCard
-            label="Body Piercing"
-            value={formatSelectionStat(piercingCount)}
-          />
+          <StatCard label="Tattoo" value={formatSelectionStat(tattooCount)} />
+          <StatCard label="Body Piercing" value={formatSelectionStat(piercingCount)} />
         </div>
 
         <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
@@ -282,7 +366,6 @@ export default function AdminDashboardClient({
               Visit to Signup: {analyticsSummary.visitToSignupRate}
             </span>
           </div>
-
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
             <StatCard label="Site Visits" value={analyticsSummary.homepageVisits} />
             <StatCard label="Unique Visitors" value={analyticsSummary.uniqueVisitors} />
@@ -291,7 +374,6 @@ export default function AdminDashboardClient({
             <StatCard label="Pre-Save Clicks" value={analyticsSummary.presaveClicks} />
             <StatCard label="Form Unlocks" value={analyticsSummary.formUnlocks} />
           </div>
-
           <div className="mt-4 border-t border-zinc-200 pt-4">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
               Top Sources
@@ -303,10 +385,8 @@ export default function AdminDashboardClient({
                     key={source.label}
                     className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
                   >
-                    <span className="text-zinc-700">{source.label}</span>
-                    <span className="font-semibold text-zinc-900">
-                      {source.count}
-                    </span>
+                    <span>{source.label}</span>
+                    <span className="font-semibold">{source.count}</span>
                   </div>
                 ))
               ) : (
@@ -318,150 +398,167 @@ export default function AdminDashboardClient({
           </div>
         </div>
 
-        {/* Per-session breakdown */}
-        {sessionsWithSignups.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sessionsWithSignups.map((s) => (
-              <div
-                key={s.id}
-                className="bg-white border border-zinc-200 rounded-lg p-4 flex items-center justify-between shadow-sm"
-              >
-                <div>
-                  <p className="font-medium text-sm">{s.city}</p>
-                  <p className="text-zinc-500 text-xs">
-                    {s.country} &middot; {s.date} &middot;{" "}
-                    <span
-                      className={
-                        s.status === "active"
-                          ? "text-green-600"
-                          : s.status === "sold_out"
-                            ? "text-red-500"
-                            : "text-zinc-500"
-                      }
-                    >
-                      {s.status}
-                    </span>
-                  </p>
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <Panel
+            title="Session Controls"
+            subtitle="Edit session details and toggle registration open or closed."
+          >
+            <div className="space-y-3">
+              {sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-medium">{session.city}</p>
+                      <p className="text-sm text-zinc-500">
+                        {session.date} • {session.venue}
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Registration {session.registrationEnabled ? "open" : "closed"} • {session.signupCount} signups
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleRegistration(session)}
+                        className={`cursor-pointer rounded-lg px-3 py-2 text-sm text-white ${
+                          session.registrationEnabled
+                            ? "bg-red-500 hover:bg-red-600"
+                            : "bg-green-600 hover:bg-green-700"
+                        }`}
+                      >
+                        {session.registrationEnabled ? "Close Registration" : "Open Registration"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingSession(session)}
+                        className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-100"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-[#8B5CF6] font-bold text-lg">
-                  {s.signupCount}
-                </span>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Homepage Content"
+            subtitle="Update hero copy, pre-save URL, and hero video URL without code changes."
+          >
+            <form onSubmit={handleSaveContent} className="space-y-3">
+              <FormField label="Hero Line 1" value={contentForm.heroLine1} onChange={(value) => setContentForm({ ...contentForm, heroLine1: value })} />
+              <FormField label="Hero Line 2" value={contentForm.heroLine2} onChange={(value) => setContentForm({ ...contentForm, heroLine2: value })} />
+              <FormField label="Hero Line 3" value={contentForm.heroLine3} onChange={(value) => setContentForm({ ...contentForm, heroLine3: value })} />
+              <FormField label="Hero Accent" value={contentForm.heroAccent} onChange={(value) => setContentForm({ ...contentForm, heroAccent: value })} />
+              <FormField label="Hero Video URL" value={contentForm.heroVideoUrl} onChange={(value) => setContentForm({ ...contentForm, heroVideoUrl: value })} />
+              <FormField label="Pre-Save URL" value={contentForm.presaveUrl} onChange={(value) => setContentForm({ ...contentForm, presaveUrl: value })} />
+              <TextAreaField label="Hero Subtitle" value={contentForm.heroSubtitle} onChange={(value) => setContentForm({ ...contentForm, heroSubtitle: value })} />
+              <button
+                type="submit"
+                disabled={contentSaving}
+                className="w-full cursor-pointer rounded-lg bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#7C3AED] disabled:opacity-50"
+              >
+                {contentSaving ? "Saving..." : "Save Homepage Content"}
+              </button>
+            </form>
+          </Panel>
+        </div>
+
+        <Panel
+          title="Signup Filters"
+          subtitle="Filter by session, source, body art, and check-in status. Save filtered lists for outreach or export."
+        >
+          <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:justify-between">
+            <div className="grid gap-3 lg:grid-cols-5 xl:flex-1">
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, phone, ID" className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm focus:border-[#8B5CF6] focus:outline-none" />
+              <select value={sessionFilter} onChange={(e) => setSessionFilter(e.target.value)} className="cursor-pointer rounded-lg border border-zinc-300 px-4 py-2.5 text-sm focus:border-[#8B5CF6] focus:outline-none">
+                <option value="">All Sessions</option>
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.cityCode}>{session.city} ({session.cityCode})</option>
+                ))}
+              </select>
+              <select value={checkedInFilter} onChange={(e) => setCheckedInFilter(e.target.value as CheckedInFilter)} className="cursor-pointer rounded-lg border border-zinc-300 px-4 py-2.5 text-sm focus:border-[#8B5CF6] focus:outline-none">
+                <option value="all">All Check-In Status</option>
+                <option value="true">Checked In</option>
+                <option value="false">Not Checked In</option>
+              </select>
+              <select value={bodyArtFilter} onChange={(e) => setBodyArtFilter(e.target.value)} className="cursor-pointer rounded-lg border border-zinc-300 px-4 py-2.5 text-sm focus:border-[#8B5CF6] focus:outline-none">
+                <option value="all">All Body Art</option>
+                <option value="Tattoo">Tattoo</option>
+                <option value="Piercing">Piercing</option>
+                <option value="None">None</option>
+              </select>
+              <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} className="cursor-pointer rounded-lg border border-zinc-300 px-4 py-2.5 text-sm focus:border-[#8B5CF6] focus:outline-none">
+                <option value="all">All Sources</option>
+                {sourceOptions.map((source) => (
+                  <option key={source} value={source}>{source}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveFilter}
+              disabled={filterSaving}
+              className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50 disabled:opacity-50"
+            >
+              {filterSaving ? "Saving..." : "Save Current List"}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {savedFilters.map((filter) => (
+              <div key={filter.id} className="flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm">
+                <button type="button" onClick={() => applyFilter(filter)} className="cursor-pointer text-zinc-700 hover:text-zinc-900">
+                  {filter.name}
+                </button>
+                <button type="button" onClick={() => handleDeleteFilter(filter.id)} className="cursor-pointer text-zinc-400 hover:text-red-500">
+                  ×
+                </button>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-zinc-300 bg-white/70 px-4 py-6 text-sm text-zinc-500">
-            Session stats appear once a session has at least one signup.
-          </div>
-        )}
+        </Panel>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 rounded-lg bg-white border border-zinc-300 px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[#8B5CF6] transition-colors"
-          />
-          <select
-            value={sessionFilter}
-            onChange={(e) => setSessionFilter(e.target.value)}
-            className="rounded-lg bg-white border border-zinc-300 px-4 py-2.5 text-sm text-zinc-900 focus:outline-none focus:border-[#8B5CF6] transition-colors cursor-pointer"
-          >
-            <option value="">All Sessions</option>
-            {filterSessions.map((s) => (
-              <option key={s.id} value={s.cityCode}>
-                {s.city} ({s.cityCode})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white border border-zinc-200 rounded-lg overflow-hidden shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
           <div className="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Showing{" "}
-              {filteredSignups.length === 0
-                ? 0
-                : (currentPage - 1) * SIGNUPS_PER_PAGE + 1}
+              Showing {filteredSignups.length === 0 ? 0 : (currentPage - 1) * SIGNUPS_PER_PAGE + 1}
               {" - "}
-              {Math.min(currentPage * SIGNUPS_PER_PAGE, filteredSignups.length)}{" "}
-              of {filteredSignups.length} filtered signups
+              {Math.min(currentPage * SIGNUPS_PER_PAGE, filteredSignups.length)} of {filteredSignups.length} filtered signups
             </span>
-            <span>
-              Page {currentPage} of {totalPages}
-            </span>
+            <span>Page {currentPage} of {totalPages}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50 text-zinc-500 text-xs uppercase tracking-wider">
-                  <th className="text-left px-4 py-3 font-medium">ID</th>
-                  <th className="text-left px-4 py-3 font-medium">Name</th>
-                  <th className="text-left px-4 py-3 font-medium">Email</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">
-                    Phone
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
-                    City
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
-                    Instagram
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">Session</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">
-                    Date
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium">
-                    Checked In
-                  </th>
+                <tr className="border-b border-zinc-200 bg-zinc-50 text-left text-xs uppercase tracking-wider text-zinc-500">
+                  <th className="px-4 py-3 font-medium">ID</th>
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">Phone</th>
+                  <th className="hidden px-4 py-3 font-medium lg:table-cell">Source</th>
+                  <th className="px-4 py-3 font-medium">Session</th>
+                  <th className="hidden px-4 py-3 font-medium md:table-cell">Date</th>
+                  <th className="px-4 py-3 font-medium">Checked In</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSignups.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-zinc-500">
-                      No signups found.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-zinc-500">No signups found.</td></tr>
                 ) : (
-                  paginatedSignups.map((s) => (
-                    <tr
-                      key={s.id}
-                      onClick={() => setSelectedSignup(s)}
-                      className="border-b border-zinc-100 hover:bg-[#f8f5ff] cursor-pointer transition-colors"
-                    >
-                      <td className="px-4 py-3 text-zinc-500 font-mono text-xs">
-                        {s.uniqueId}
-                      </td>
-                      <td className="px-4 py-3 font-medium">{s.fullName}</td>
-                      <td className="px-4 py-3 text-zinc-600">{s.email}</td>
-                      <td className="px-4 py-3 text-zinc-600 hidden md:table-cell">
-                        {s.phone}
-                      </td>
-                      <td className="px-4 py-3 text-zinc-600 hidden lg:table-cell">
-                        {s.city}
-                      </td>
-                      <td className="px-4 py-3 text-zinc-600 hidden lg:table-cell">
-                        {s.instagram || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="bg-[#f3ecff] text-[#6d28d9] px-2 py-0.5 rounded text-xs">
-                          {s.sessionCity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-zinc-500 text-xs hidden md:table-cell">
-                        {new Date(s.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.checkedIn ? (
-                          <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
-                        ) : (
-                          <span className="inline-block w-2 h-2 rounded-full bg-zinc-300" />
-                        )}
-                      </td>
+                  paginatedSignups.map((signup) => (
+                    <tr key={signup.id} onClick={() => setSelectedSignup(signup)} className="cursor-pointer border-b border-zinc-100 hover:bg-[#f8f5ff]">
+                      <td className="px-4 py-3 font-mono text-xs text-zinc-500">{signup.uniqueId}</td>
+                      <td className="px-4 py-3 font-medium">{signup.fullName}</td>
+                      <td className="px-4 py-3 text-zinc-600">{signup.email}</td>
+                      <td className="hidden px-4 py-3 text-zinc-600 md:table-cell">{signup.phone}</td>
+                      <td className="hidden px-4 py-3 text-zinc-600 lg:table-cell">{signup.utmSource || "Direct"}</td>
+                      <td className="px-4 py-3"><span className="rounded bg-[#f3ecff] px-2 py-0.5 text-xs text-[#6d28d9]">{signup.sessionCity}</span></td>
+                      <td className="hidden px-4 py-3 text-xs text-zinc-500 md:table-cell">{new Date(signup.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3"><span className={`inline-block h-2 w-2 rounded-full ${signup.checkedIn ? "bg-green-500" : "bg-zinc-300"}`} /></td>
                     </tr>
                   ))
                 )}
@@ -470,34 +567,16 @@ export default function AdminDashboardClient({
           </div>
           <div className="flex flex-col gap-3 border-t border-zinc-200 px-4 py-3 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Showing{" "}
-              {filteredSignups.length === 0
-                ? 0
-                : (currentPage - 1) * SIGNUPS_PER_PAGE + 1}
+              Showing {filteredSignups.length === 0 ? 0 : (currentPage - 1) * SIGNUPS_PER_PAGE + 1}
               {" - "}
-              {Math.min(currentPage * SIGNUPS_PER_PAGE, filteredSignups.length)}{" "}
-              of {filteredSignups.length} filtered signups
+              {Math.min(currentPage * SIGNUPS_PER_PAGE, filteredSignups.length)} of {filteredSignups.length} filtered signups
             </span>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-                disabled={currentPage === 1}
-                className="rounded border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
+              <button type="button" onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))} disabled={currentPage === 1} className="rounded border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 disabled:opacity-40">
                 Previous
               </button>
-              <span>
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  setCurrentPage((page) => Math.min(page + 1, totalPages))
-                }
-                disabled={currentPage === totalPages}
-                className="rounded border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
+              <span>Page {currentPage} of {totalPages}</span>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))} disabled={currentPage === totalPages} className="rounded border border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 disabled:opacity-40">
                 Next
               </button>
             </div>
@@ -505,184 +584,121 @@ export default function AdminDashboardClient({
         </div>
       </div>
 
-      {/* Signup Detail Modal */}
-      {selectedSignup && (
-        <div
-          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setSelectedSignup(null)}
-        >
-          <div
-            className="bg-white border border-zinc-200 rounded-xl w-full max-w-lg p-6 space-y-4 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
+      {selectedSignup ? (
+        <ModalShell onClose={() => setSelectedSignup(null)}>
+          <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold">Signup Details</h2>
-              <button
-                onClick={() => setSelectedSignup(null)}
-                className="text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer text-xl leading-none"
-              >
-                &times;
-              </button>
+              <button onClick={() => setSelectedSignup(null)} className="cursor-pointer text-xl leading-none text-zinc-500 hover:text-zinc-900">&times;</button>
             </div>
-
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Detail label="Unique ID" value={selectedSignup.uniqueId} />
               <Detail label="Full Name" value={selectedSignup.fullName} />
               <Detail label="Email" value={selectedSignup.email} />
               <Detail label="Phone" value={selectedSignup.phone} />
-              <Detail label="City" value={selectedSignup.city} />
-              <Detail
-                label="Instagram"
-                value={selectedSignup.instagram || "—"}
-              />
-              <Detail
-                label="X"
-                value={selectedSignup.xUsername || "—"}
-              />
-              <Detail
-                label="TikTok"
-                value={selectedSignup.tiktokUsername || "—"}
-              />
-              <Detail
-                label="Body Art Preference"
-                value={selectedSignup.bodyArtPreference || "—"}
-              />
+              <Detail label="Source" value={selectedSignup.utmSource || "Direct"} />
+              <Detail label="Body Art Preference" value={selectedSignup.bodyArtPreference || "—"} />
               <Detail label="Session" value={selectedSignup.sessionCity} />
-              <Detail
-                label="Checked In"
-                value={selectedSignup.checkedIn ? "Yes" : "No"}
-              />
-              <Detail
-                label="Checked In At"
-                value={
-                  selectedSignup.checkedInAt
-                    ? new Date(selectedSignup.checkedInAt).toLocaleString()
-                    : "—"
-                }
-              />
-              <Detail
-                label="Registered"
-                value={new Date(selectedSignup.createdAt).toLocaleString()}
-              />
+              <Detail label="Checked In" value={selectedSignup.checkedIn ? "Yes" : "No"} />
             </div>
-
-            {selectedSignup.qrCodeData && (
-              <div className="flex flex-col items-center pt-2">
-                <p className="text-xs text-zinc-500 mb-2">QR Code</p>
-                <img
-                  src={selectedSignup.qrCodeData}
-                  alt="QR Code"
-                  className="w-40 h-40 rounded-lg border border-zinc-200"
-                />
-              </div>
-            )}
           </div>
-        </div>
-      )}
+        </ModalShell>
+      ) : null}
 
-      {/* Add Session Modal */}
-      {showAddSession && (
-        <div
-          className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setShowAddSession(false)}
-        >
-          <div
-            className="bg-white border border-zinc-200 rounded-xl w-full max-w-md p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
+      {showAddSession ? (
+        <ModalShell onClose={() => setShowAddSession(false)}>
+          <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold">Add Session</h2>
-              <button
-                onClick={() => setShowAddSession(false)}
-                className="text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer text-xl leading-none"
-              >
-                &times;
-              </button>
+              <button onClick={() => setShowAddSession(false)} className="cursor-pointer text-xl leading-none text-zinc-500 hover:text-zinc-900">&times;</button>
             </div>
-
             <form onSubmit={handleAddSession} className="space-y-3">
-              <FormField
-                label="City"
-                required
-                value={sessionForm.city}
-                onChange={(v) => setSessionForm({ ...sessionForm, city: v })}
-                placeholder="e.g. Lagos"
-              />
-              <FormField
-                label="City Code"
-                required
-                value={sessionForm.cityCode}
-                onChange={(v) =>
-                  setSessionForm({ ...sessionForm, cityCode: v })
-                }
-                placeholder="e.g. LAG"
-              />
-              <FormField
-                label="Country"
-                required
-                value={sessionForm.country}
-                onChange={(v) =>
-                  setSessionForm({ ...sessionForm, country: v })
-                }
-                placeholder="e.g. Nigeria"
-              />
-              <FormField
-                label="Date"
-                value={sessionForm.date}
-                onChange={(v) => setSessionForm({ ...sessionForm, date: v })}
-                placeholder="e.g. March 30, 2026 or TBA"
-              />
-              <FormField
-                label="Venue"
-                value={sessionForm.venue}
-                onChange={(v) => setSessionForm({ ...sessionForm, venue: v })}
-                placeholder="e.g. Eko Convention Center"
-              />
-              <div>
-                <label className="block text-xs font-medium text-zinc-500 mb-1 uppercase tracking-wider">
-                  Status
-                </label>
-                <select
-                  value={sessionForm.status}
-                  onChange={(e) =>
-                    setSessionForm({ ...sessionForm, status: e.target.value })
-                  }
-                  className="w-full rounded-lg bg-white border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-[#8B5CF6] transition-colors cursor-pointer"
-                >
-                  <option value="upcoming">Upcoming</option>
-                  <option value="active">Active</option>
-                  <option value="sold_out">Sold Out</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={sessionFormLoading}
-                className="w-full rounded-lg bg-[#8B5CF6] text-white hover:bg-[#7C3AED] disabled:opacity-50 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer mt-2"
-              >
+              <FormField label="City" value={sessionForm.city} onChange={(value) => setSessionForm({ ...sessionForm, city: value })} required />
+              <FormField label="City Code" value={sessionForm.cityCode} onChange={(value) => setSessionForm({ ...sessionForm, cityCode: value })} required />
+              <FormField label="Country" value={sessionForm.country} onChange={(value) => setSessionForm({ ...sessionForm, country: value })} required />
+              <FormField label="Date" value={sessionForm.date} onChange={(value) => setSessionForm({ ...sessionForm, date: value })} />
+              <FormField label="Venue" value={sessionForm.venue} onChange={(value) => setSessionForm({ ...sessionForm, venue: value })} />
+              <FormField label="Status" value={sessionForm.status} onChange={(value) => setSessionForm({ ...sessionForm, status: value })} />
+              <button type="submit" disabled={sessionFormLoading} className="w-full cursor-pointer rounded-lg bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#7C3AED] disabled:opacity-50">
                 {sessionFormLoading ? "Creating..." : "Create Session"}
               </button>
             </form>
           </div>
-        </div>
-      )}
+        </ModalShell>
+      ) : null}
+
+      {editingSession ? (
+        <ModalShell onClose={() => setEditingSession(null)}>
+          <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Edit Session</h2>
+              <button onClick={() => setEditingSession(null)} className="cursor-pointer text-xl leading-none text-zinc-500 hover:text-zinc-900">&times;</button>
+            </div>
+            <form onSubmit={handleSaveSession} className="space-y-3">
+              <FormField label="City" value={editingSession.city} onChange={(value) => setEditingSession({ ...editingSession, city: value })} />
+              <FormField label="City Code" value={editingSession.cityCode} onChange={(value) => setEditingSession({ ...editingSession, cityCode: value })} />
+              <FormField label="Country" value={editingSession.country} onChange={(value) => setEditingSession({ ...editingSession, country: value })} />
+              <FormField label="Date" value={editingSession.date} onChange={(value) => setEditingSession({ ...editingSession, date: value })} />
+              <FormField label="Venue" value={editingSession.venue} onChange={(value) => setEditingSession({ ...editingSession, venue: value })} />
+              <FormField label="Status" value={editingSession.status} onChange={(value) => setEditingSession({ ...editingSession, status: value })} />
+              <label className="flex items-center gap-3 pt-2 text-sm text-zinc-700">
+                <input type="checkbox" checked={editingSession.registrationEnabled} onChange={(e) => setEditingSession({ ...editingSession, registrationEnabled: e.target.checked })} />
+                Registration enabled
+              </label>
+              <button type="submit" disabled={sessionSaving} className="w-full cursor-pointer rounded-lg bg-[#8B5CF6] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#7C3AED] disabled:opacity-50">
+                {sessionSaving ? "Saving..." : "Save Session"}
+              </button>
+            </form>
+          </div>
+        </ModalShell>
+      ) : null}
     </div>
   );
 }
 
-function StatCard({
-  label,
-  value,
+function Panel({
+  title,
+  subtitle,
+  children,
 }: {
-  label: string;
-  value: string | number;
+  title: string;
+  subtitle: string;
+  children: ReactNode;
 }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-lg p-4 shadow-sm">
-      <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">
-        {label}
-      </p>
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          {title}
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ModalShell({
+  children,
+  onClose,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <p className="mb-1 text-xs uppercase tracking-wider text-zinc-500">{label}</p>
       <p className="text-2xl font-bold">{value}</p>
     </div>
   );
@@ -691,8 +707,8 @@ function StatCard({
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-zinc-500 text-xs">{label}</p>
-      <p className="text-zinc-900 text-sm break-all">{value}</p>
+      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="break-all text-sm text-zinc-900">{value}</p>
     </div>
   );
 }
@@ -701,28 +717,48 @@ function FormField({
   label,
   value,
   onChange,
-  placeholder,
   required,
 }: {
   label: string;
   value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
+  onChange: (value: string) => void;
   required?: boolean;
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-zinc-500 mb-1 uppercase tracking-wider">
+      <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-zinc-500">
         {label}
-        {required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
         required={required}
-        className="w-full rounded-lg bg-white border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[#8B5CF6] transition-colors"
+        className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-[#8B5CF6] focus:outline-none"
+      />
+    </div>
+  );
+}
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-zinc-500">
+        {label}
+      </label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={4}
+        className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-[#8B5CF6] focus:outline-none"
       />
     </div>
   );

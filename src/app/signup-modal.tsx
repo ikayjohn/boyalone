@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { getAnalyticsAttribution, getAnalyticsIdentity, trackEvent } from "@/lib/analytics";
+import { DEFAULT_SITE_CONTENT } from "@/lib/site-content";
 
 export interface SessionInfo {
   id: number;
@@ -14,6 +15,7 @@ export interface SessionInfo {
   status: string;
   imageUrl: string | null;
   capacity: number | null;
+  registrationEnabled: boolean;
   _count: { signups: number };
 }
 
@@ -28,9 +30,9 @@ interface SignupModalProps {
   onClose: () => void;
   sessionCity: string;
   initialSession?: SessionInfo | null;
+  presaveUrl?: string;
 }
 
-const PRESAVE_URL = "https://keyqaad.lnk.to/ClarityOfMind";
 const PRESAVE_UNLOCK_DELAY_SECONDS = 12;
 
 const BODY_ART_OPTIONS = [
@@ -112,6 +114,7 @@ export default function SignupModal({
   onClose,
   sessionCity,
   initialSession = null,
+  presaveUrl = DEFAULT_SITE_CONTENT.presaveUrl,
 }: SignupModalProps) {
   const [session, setSession] = useState<SessionInfo | null>(initialSession);
   const [loading, setLoading] = useState(initialSession === null);
@@ -155,7 +158,7 @@ export default function SignupModal({
     trackEvent("presave_click");
     setPresaveStarted(true);
     setUnlockCountdown(PRESAVE_UNLOCK_DELAY_SECONDS);
-    window.open(PRESAVE_URL, "_blank", "noopener,noreferrer");
+    window.open(presaveUrl, "_blank", "noopener,noreferrer");
   }
 
   useEffect(() => {
@@ -306,6 +309,7 @@ export default function SignupModal({
     session !== null &&
     session.capacity !== null &&
     session._count.signups >= session.capacity;
+  const registrationClosed = session !== null && !session.registrationEnabled;
   const showCapacity = session !== null && session.capacity !== null;
   const capacity = showCapacity ? session.capacity : null;
 
@@ -402,7 +406,16 @@ export default function SignupModal({
               </div>
 
               <div className="px-4 py-6 sm:px-8 sm:py-8">
-                {isFull ? (
+                {registrationClosed ? (
+                  <div className="flex min-h-[320px] flex-col items-center justify-center text-center sm:min-h-[420px]">
+                    <h3 className="font-[family-name:var(--font-playfair)] text-3xl text-[#171411]">
+                      Registration is closed
+                    </h3>
+                    <p className="mt-4 max-w-md font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/60">
+                      This session is not accepting registrations right now. Check back when the team reopens access.
+                    </p>
+                  </div>
+                ) : isFull ? (
                   <div className="flex min-h-[320px] flex-col items-center justify-center text-center sm:min-h-[420px]">
                     <h3 className="font-[family-name:var(--font-playfair)] text-3xl text-[#171411]">
                       This session is full

@@ -77,6 +77,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!session.registrationEnabled) {
+      return NextResponse.json(
+        { error: "Registration is currently closed for this session." },
+        { status: 403 }
+      );
+    }
+
     // Check for duplicate email in this session
     const existingSignup = await prisma.signup.findFirst({
       where: {
@@ -144,6 +151,23 @@ export async function POST(request: NextRequest) {
             bodyArtPreference: bodyArtPreference || null,
             agreedToTerms: true,
             qrCodeData,
+            analyticsVisitorId: analyticsVisitorId?.trim() || null,
+            analyticsSessionId: analyticsSessionId?.trim() || null,
+            utmSource:
+              (analyticsAttribution as AnalyticsAttribution | undefined)
+                ?.utmSource?.trim() || null,
+            utmMedium:
+              (analyticsAttribution as AnalyticsAttribution | undefined)
+                ?.utmMedium?.trim() || null,
+            utmCampaign:
+              (analyticsAttribution as AnalyticsAttribution | undefined)
+                ?.utmCampaign?.trim() || null,
+            utmTerm:
+              (analyticsAttribution as AnalyticsAttribution | undefined)
+                ?.utmTerm?.trim() || null,
+            utmContent:
+              (analyticsAttribution as AnalyticsAttribution | undefined)
+                ?.utmContent?.trim() || null,
           },
         });
         break;

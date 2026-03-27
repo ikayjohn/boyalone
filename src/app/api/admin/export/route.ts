@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { buildSignupWhereClause } from "@/lib/signup-filters";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 
@@ -12,7 +13,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const format = request.nextUrl.searchParams.get("format") ?? "xlsx";
+    const where = buildSignupWhereClause({
+      search: request.nextUrl.searchParams.get("search") || "",
+      sessionCityCode: request.nextUrl.searchParams.get("session") || "",
+      checkedIn: request.nextUrl.searchParams.get("checkedIn"),
+      bodyArtPreference:
+        request.nextUrl.searchParams.get("bodyArtPreference") || "",
+      utmSource: request.nextUrl.searchParams.get("utmSource") || "",
+    });
     const signups = await prisma.signup.findMany({
+      where,
       include: { session: true },
       orderBy: { createdAt: "desc" },
     });
@@ -28,6 +38,7 @@ export async function GET(request: NextRequest) {
       tiktokUsername: signup.tiktokUsername || "",
       bodyArtPreference: signup.bodyArtPreference || "",
       sessionCity: signup.session.city,
+      utmSource: signup.utmSource || "",
       checkedIn: signup.checkedIn ? "Yes" : "No",
       createdAt: signup.createdAt.toISOString(),
     }));
@@ -44,6 +55,7 @@ export async function GET(request: NextRequest) {
         "TikTok",
         "Body Art Preference",
         "Session City",
+        "Source",
         "Checked In",
         "Registered At",
       ];
@@ -60,6 +72,7 @@ export async function GET(request: NextRequest) {
           row.tiktokUsername,
           row.bodyArtPreference,
           row.sessionCity,
+          row.utmSource,
           row.checkedIn,
           row.createdAt,
         ]
@@ -118,6 +131,7 @@ export async function GET(request: NextRequest) {
         { label: "Phone", key: "phone", width: 80 },
         { label: "Session", key: "sessionCity", width: 65 },
         { label: "Art", key: "bodyArtPreference", width: 55 },
+        { label: "Source", key: "utmSource", width: 70 },
       ] as const;
 
       const drawTableHeader = (y: number) => {
@@ -192,6 +206,7 @@ export async function GET(request: NextRequest) {
       { header: "TikTok", key: "tiktokUsername", width: 20 },
       { header: "Body Art Preference", key: "bodyArtPreference", width: 22 },
       { header: "Session City", key: "sessionCity", width: 18 },
+      { header: "Source", key: "utmSource", width: 18 },
       { header: "Checked In", key: "checkedIn", width: 12 },
       { header: "Registered At", key: "createdAt", width: 22 },
     ];

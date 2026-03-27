@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { trackEvent, trackOncePerTab } from "@/lib/analytics";
+import { DEFAULT_SITE_CONTENT, type SiteContentPayload } from "@/lib/site-content";
 import SignupModal, { type SessionInfo } from "./signup-modal";
 
 const pastSessions = [
@@ -56,6 +57,8 @@ const socialLinks = [
 export default function Home() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [lagosSession, setLagosSession] = useState<SessionInfo | null>(null);
+  const [siteContent, setSiteContent] =
+    useState<SiteContentPayload>(DEFAULT_SITE_CONTENT);
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -82,6 +85,22 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
 
+    async function preloadContent() {
+      try {
+        const res = await fetch("/api/content");
+        if (!res.ok) {
+          return;
+        }
+
+        const data = await res.json();
+        if (!cancelled && data.content) {
+          setSiteContent(data.content);
+        }
+      } catch {
+        // Keep defaults when content settings are unavailable.
+      }
+    }
+
     async function preloadSession() {
       try {
         const res = await fetch("/api/sessions/lagos");
@@ -98,6 +117,7 @@ export default function Home() {
       }
     }
 
+    preloadContent();
     preloadSession();
 
     return () => {
@@ -144,6 +164,7 @@ export default function Home() {
         onClose={() => setShowSignupModal(false)}
         sessionCity="lagos"
         initialSession={lagosSession}
+        presaveUrl={siteContent.presaveUrl}
       />
 
       {/* ─── NAVIGATION ─── */}
@@ -170,7 +191,7 @@ export default function Home() {
           preload="auto"
           aria-hidden="true"
         >
-          <source src="/hero1.mp4" type="video/mp4" />
+          <source src={siteContent.heroVideoUrl} type="video/mp4" />
         </video>
 
         <div className="absolute inset-0 bg-[#050505]/55" />
@@ -180,22 +201,22 @@ export default function Home() {
         {/* Main heading — offset left, dramatic size */}
         <div className="relative z-10 max-w-4xl">
           <h1 className="font-[family-name:var(--font-playfair)] text-[clamp(2.9rem,13vw,7rem)] font-medium leading-[0.88] tracking-[-0.03em] text-[#F5F0EB] animate-slide-left delay-200">
-            Spirit
+            {siteContent.heroLine1}
             <br />
-            Warehouse
+            {siteContent.heroLine2}
             <br />
-            <span className="italic text-[#F5F0EB]/70">Session,</span>
+            <span className="italic text-[#F5F0EB]/70">
+              {siteContent.heroLine3}
+            </span>
             <br />
-            <span className="text-[#8B5CF6]/90">Lagos</span>
+            <span className="text-[#8B5CF6]/90">{siteContent.heroAccent}</span>
           </h1>
 
           {/* Animated accent line */}
           <div className="mt-5 h-[1px] w-24 bg-[#8B5CF6]/40 animate-line-expand delay-700 sm:mt-8 sm:w-48" />
 
           <p className="mt-5 max-w-[19rem] font-[family-name:var(--font-outfit)] text-sm font-light leading-relaxed text-[#F5F0EB]/58 animate-fade-in-up delay-800 sm:mt-8 sm:max-w-md sm:text-base sm:text-[#F5F0EB]/50">
-            An exclusive listening experience for{" "}
-            <em className="text-[#F5F0EB]/70 not-italic">Clarity of Mind</em>{" "}
-            , curated in the spirit of Lagos.
+            {siteContent.heroSubtitle}
           </p>
 
           {/* CTAs */}
