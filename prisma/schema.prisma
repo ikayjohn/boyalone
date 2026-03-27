@@ -23,6 +23,27 @@ model Session {
   @@map("sessions")
 }
 
+model AnalyticsEvent {
+  id         Int      @id @default(autoincrement())
+  eventType  String   @map("event_type") @db.VarChar(50)
+  path       String?  @db.VarChar(255)
+  visitorId  String?  @map("visitor_id") @db.VarChar(100)
+  sessionId  String?  @map("session_id") @db.VarChar(100)
+  utmSource  String?  @map("utm_source") @db.VarChar(255)
+  utmMedium  String?  @map("utm_medium") @db.VarChar(255)
+  utmCampaign String? @map("utm_campaign") @db.VarChar(255)
+  utmTerm    String?  @map("utm_term") @db.VarChar(255)
+  utmContent String?  @map("utm_content") @db.VarChar(255)
+  referrer   String?  @db.VarChar(500)
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([visitorId])
+  @@map("analytics_events")
+}
+
 model Signup {
   id             Int       @id @default(autoincrement())
   uniqueId       String    @unique @map("unique_id") @db.VarChar(20)

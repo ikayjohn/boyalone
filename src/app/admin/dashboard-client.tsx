@@ -42,6 +42,20 @@ interface Props {
   signups: SignupData[];
   totalSignups: number;
   checkedInCount: number;
+  analyticsSummary: {
+    homepageVisits: number;
+    uniqueVisitors: number;
+    registerClicks: number;
+    modalOpens: number;
+    presaveClicks: number;
+    formUnlocks: number;
+    signupCompletions: number;
+    visitToSignupRate: string;
+    topAttribution: Array<{
+      label: string;
+      count: number;
+    }>;
+  };
 }
 
 export default function AdminDashboardClient({
@@ -49,6 +63,7 @@ export default function AdminDashboardClient({
   signups,
   totalSignups,
   checkedInCount,
+  analyticsSummary,
 }: Props) {
   const [search, setSearch] = useState("");
   const [sessionFilter, setSessionFilter] = useState("");
@@ -251,6 +266,56 @@ export default function AdminDashboardClient({
             label="Body Piercing"
             value={formatSelectionStat(piercingCount)}
           />
+        </div>
+
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                Traffic & Funnel
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                First-party tracking from the homepage and registration flow.
+              </p>
+            </div>
+            <span className="rounded-full bg-[#f3ecff] px-3 py-1 text-xs font-medium text-[#6d28d9]">
+              Visit to Signup: {analyticsSummary.visitToSignupRate}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+            <StatCard label="Site Visits" value={analyticsSummary.homepageVisits} />
+            <StatCard label="Unique Visitors" value={analyticsSummary.uniqueVisitors} />
+            <StatCard label="Register Clicks" value={analyticsSummary.registerClicks} />
+            <StatCard label="Modal Opens" value={analyticsSummary.modalOpens} />
+            <StatCard label="Pre-Save Clicks" value={analyticsSummary.presaveClicks} />
+            <StatCard label="Form Unlocks" value={analyticsSummary.formUnlocks} />
+          </div>
+
+          <div className="mt-4 border-t border-zinc-200 pt-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+              Top Sources
+            </p>
+            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {analyticsSummary.topAttribution.length > 0 ? (
+                analyticsSummary.topAttribution.map((source) => (
+                  <div
+                    key={source.label}
+                    className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm"
+                  >
+                    <span className="text-zinc-700">{source.label}</span>
+                    <span className="font-semibold text-zinc-900">
+                      {source.count}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500">
+                  No UTM source data yet.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Per-session breakdown */}

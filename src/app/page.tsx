@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { trackEvent, trackOncePerTab } from "@/lib/analytics";
 import SignupModal, { type SessionInfo } from "./signup-modal";
 
 const pastSessions = [
@@ -58,6 +59,8 @@ export default function Home() {
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
+    trackOncePerTab("homepage_view", "homepage_view", { path: "/" });
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -199,7 +202,10 @@ export default function Home() {
           <div className="mt-7 flex w-full flex-col items-stretch gap-3 animate-fade-in-up delay-1000 sm:mt-10 sm:w-auto sm:flex-row sm:items-start sm:gap-4">
             <button
               type="button"
-              onClick={() => setShowSignupModal(true)}
+              onClick={() => {
+                trackEvent("register_click", { path: "/" });
+                setShowSignupModal(true);
+              }}
               className="group relative inline-flex min-h-13 w-full cursor-pointer items-center justify-center gap-3 px-6 py-4 text-center bg-[#8B5CF6] text-[#0A0A0A] font-[family-name:var(--font-outfit)] text-[11px] tracking-[0.22em] uppercase font-semibold transition-colors duration-300 hover:bg-[#F5F0EB] sm:min-h-0 sm:w-auto sm:px-8 sm:text-xs sm:tracking-[0.25em]"
             >
               Register Now

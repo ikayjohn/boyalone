@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getAnalyticsAttribution, getAnalyticsIdentity, trackEvent } from "@/lib/analytics";
 
 export interface SessionInfo {
   id: number;
@@ -130,6 +131,8 @@ export default function SignupModal({
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [presaveStarted, setPresaveStarted] = useState(false);
   const [unlockCountdown, setUnlockCountdown] = useState(0);
+  const hasTrackedOpenRef = useRef(false);
+  const hasTrackedUnlockRef = useRef(false);
 
   function resetFormState() {
     setError("");
@@ -149,6 +152,7 @@ export default function SignupModal({
   }
 
   function handlePresaveClick() {
+    trackEvent("presave_click");
     setPresaveStarted(true);
     setUnlockCountdown(PRESAVE_UNLOCK_DELAY_SECONDS);
     window.open(PRESAVE_URL, "_blank", "noopener,noreferrer");
@@ -168,7 +172,14 @@ export default function SignupModal({
 
   useEffect(() => {
     if (!isOpen) {
+      hasTrackedOpenRef.current = false;
+      hasTrackedUnlockRef.current = false;
       return;
+    }
+
+    if (!hasTrackedOpenRef.current) {
+      trackEvent("registration_modal_open");
+      hasTrackedOpenRef.current = true;
     }
 
     document.body.style.overflow = "hidden";
@@ -176,6 +187,20 @@ export default function SignupModal({
       document.body.style.overflow = "";
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !presaveStarted ||
+      unlockCountdown > 0 ||
+      hasTrackedUnlockRef.current
+    ) {
+      return;
+    }
+
+    trackEvent("registration_form_unlock");
+    hasTrackedUnlockRef.current = true;
+  }, [isOpen, presaveStarted, unlockCountdown]);
 
   useEffect(() => {
     if (initialSession) {
@@ -231,6 +256,8 @@ export default function SignupModal({
     setSubmitting(true);
 
     try {
+      const identity = getAnalyticsIdentity();
+      const attribution = getAnalyticsAttribution();
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -245,6 +272,9 @@ export default function SignupModal({
           tiktokUsername: tiktokUsername.replace(/^@/, ""),
           bodyArtPreference: bodyArtPreference || null,
           agreedToTerms,
+          analyticsVisitorId: identity.visitorId,
+          analyticsSessionId: identity.sessionId,
+          analyticsAttribution: attribution,
         }),
       });
 

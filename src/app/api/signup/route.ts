@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { type AnalyticsAttribution, type AnalyticsEventType } from "@/lib/analytics";
 import { generateQRCode, generateUniqueId } from "@/lib/qr";
 
 export async function POST(request: NextRequest) {
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
       tiktokUsername,
       bodyArtPreference,
       agreedToTerms,
+      analyticsVisitorId,
+      analyticsSessionId,
+      analyticsAttribution,
     } = body;
     const normalizedEmail = email?.trim().toLowerCase();
     const normalizedPhone = phone?.trim();
@@ -161,6 +165,26 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    const eventType: AnalyticsEventType = "signup_complete";
+    const referrer = request.headers.get("referer");
+    const userAgent = request.headers.get("user-agent");
+
+    await prisma.analyticsEvent.create({
+      data: {
+        eventType,
+        path: "/",
+        visitorId: analyticsVisitorId?.trim() || null,
+        sessionId: analyticsSessionId?.trim() || null,
+        utmSource: (analyticsAttribution as AnalyticsAttribution | undefined)?.utmSource?.trim() || null,
+        utmMedium: (analyticsAttribution as AnalyticsAttribution | undefined)?.utmMedium?.trim() || null,
+        utmCampaign: (analyticsAttribution as AnalyticsAttribution | undefined)?.utmCampaign?.trim() || null,
+        utmTerm: (analyticsAttribution as AnalyticsAttribution | undefined)?.utmTerm?.trim() || null,
+        utmContent: (analyticsAttribution as AnalyticsAttribution | undefined)?.utmContent?.trim() || null,
+        referrer,
+        userAgent,
+      },
+    });
 
     return NextResponse.json({
       success: true,

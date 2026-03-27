@@ -7,7 +7,7 @@ export default async function AdminPage() {
   const isAdmin = await verifyAdmin();
   if (!isAdmin) redirect("/admin/login");
 
-  const [sessions, signups] = await Promise.all([
+  const [sessions, signups, groupedAnalytics, uniqueVisitors, attributionEvents] = await Promise.all([
     prisma.session.findMany({
       include: { _count: { select: { signups: true } } },
       orderBy: { createdAt: "desc" },
@@ -16,12 +16,71 @@ export default async function AdminPage() {
       include: { session: true },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.analyticsEvent.groupBy({
+      by: ["eventType"],
+      _count: { _all: true },
+    }),
+    prisma.analyticsEvent.findMany({
+      where: {
+        eventType: "homepage_view",
+        visitorId: { not: null },
+      },
+      distinct: ["visitorId"],
+      select: { visitorId: true },
+    }),
+    prisma.analyticsEvent.findMany({
+      where: {
+        eventType: "homepage_view",
+      },
+      select: {
+        utmSource: true,
+        utmMedium: true,
+        utmCampaign: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
   ]);
 
   const totalSignups = signups.length;
   const checkedInCount = signups.filter(
     (s: (typeof signups)[number]) => s.checkedIn
   ).length;
+  const analyticsCounts = groupedAnalytics.reduce<Record<string, number>>(
+    (acc, item) => {
+      acc[item.eventType] = item._count._all;
+      return acc;
+    },
+    {}
+  );
+  const homepageVisits = analyticsCounts.homepage_view ?? 0;
+  const registerClicks = analyticsCounts.register_click ?? 0;
+  const modalOpens = analyticsCounts.registration_modal_open ?? 0;
+  const presaveClicks = analyticsCounts.presave_click ?? 0;
+  const formUnlocks = analyticsCounts.registration_form_unlock ?? 0;
+  const signupCompletions = analyticsCounts.signup_complete ?? totalSignups;
+  const visitToSignupRate =
+    homepageVisits > 0
+      ? `${Math.round((signupCompletions / homepageVisits) * 100)}%`
+      : "0%";
+  const topAttribution = attributionEvents.reduce<
+    Array<{ label: string; count: number }>
+  >((acc, event) => {
+    const label =
+      event.utmSource && event.utmMedium
+        ? `${event.utmSource} / ${event.utmMedium}`
+        : event.utmSource || event.utmCampaign || "Direct / Unknown";
+    const existing = acc.find((item) => item.label === label);
+
+    if (existing) {
+      existing.count += 1;
+      return acc;
+    }
+
+    acc.push({ label, count: 1 });
+    return acc;
+  }, []).sort((a, b) => b.count - a.count).slice(0, 5);
 
   const sessionsWithCounts = sessions.map((s: (typeof sessions)[number]) => ({
     id: s.id,
@@ -61,6 +120,17 @@ export default async function AdminPage() {
       signups={serializedSignups}
       totalSignups={totalSignups}
       checkedInCount={checkedInCount}
+      analyticsSummary={{
+        homepageVisits,
+        uniqueVisitors: uniqueVisitors.length,
+        registerClicks,
+        modalOpens,
+        presaveClicks,
+        formUnlocks,
+        signupCompletions,
+        visitToSignupRate,
+        topAttribution,
+      }}
     />
   );
 }
