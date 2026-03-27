@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { CheckInButton } from "./check-in-button";
 
 interface VerifyPageProps {
   params: Promise<{ id: string }>;
@@ -154,15 +153,16 @@ export default async function VerifyPage({ params }: VerifyPageProps) {
           </div>
         </div>
 
-        {/* Check-in action */}
-        <div className="mt-6">
-          <CheckInButton
-            uniqueId={signup.uniqueId}
-            initialCheckedIn={isCheckedIn}
-            initialCheckedInAt={
-              signup.checkedInAt ? signup.checkedInAt.toISOString() : null
-            }
-          />
+        <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 text-center">
+          <p className="text-sm font-medium uppercase tracking-[0.24em] text-neutral-500">
+            Check-In
+          </p>
+          <p className="mt-2 text-neutral-200">
+            Event staff will check you in at the venue.
+          </p>
+          <p className="mt-1 text-sm text-neutral-500">
+            This page is now read-only and cannot mark attendance.
+          </p>
         </div>
       </div>
     </div>

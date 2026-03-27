@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function GET(
@@ -36,6 +37,15 @@ export async function POST(
   const { id } = await params;
 
   try {
+    const isAdmin = await verifyAdmin();
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const signup = await prisma.signup.findUnique({
       where: { uniqueId: id },
       include: { session: true },
