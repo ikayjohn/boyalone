@@ -8,6 +8,29 @@ export default async function AdminPage() {
   const isAdmin = await verifyAdmin();
   if (!isAdmin) redirect("/admin/login");
 
+  const analyticsClient = (prisma as typeof prisma & {
+    analyticsEvent?: {
+      groupBy: typeof prisma.analyticsEvent.groupBy;
+      findMany: typeof prisma.analyticsEvent.findMany;
+    };
+    siteContent?: {
+      findUnique: typeof prisma.siteContent.findUnique;
+    };
+    savedSignupFilter?: {
+      findMany: typeof prisma.savedSignupFilter.findMany;
+    };
+  }).analyticsEvent;
+  const siteContentClient = (prisma as typeof prisma & {
+    siteContent?: {
+      findUnique: typeof prisma.siteContent.findUnique;
+    };
+  }).siteContent;
+  const savedSignupFilterClient = (prisma as typeof prisma & {
+    savedSignupFilter?: {
+      findMany: typeof prisma.savedSignupFilter.findMany;
+    };
+  }).savedSignupFilter;
+
   const [
     sessions,
     signups,
@@ -25,37 +48,47 @@ export default async function AdminPage() {
       include: { session: true },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.analyticsEvent.groupBy({
-      by: ["eventType"],
-      _count: { _all: true },
-    }),
-    prisma.analyticsEvent.findMany({
-      where: {
-        eventType: "homepage_view",
-        visitorId: { not: null },
-      },
-      distinct: ["visitorId"],
-      select: { visitorId: true },
-    }),
-    prisma.analyticsEvent.findMany({
-      where: {
-        eventType: "homepage_view",
-      },
-      select: {
-        utmSource: true,
-        utmMedium: true,
-        utmCampaign: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    }),
-    prisma.siteContent.findUnique({
-      where: { key: "homepage" },
-    }),
-    prisma.savedSignupFilter.findMany({
-      orderBy: { createdAt: "desc" },
-    }),
+    analyticsClient
+      ? analyticsClient.groupBy({
+          by: ["eventType"],
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+    analyticsClient
+      ? analyticsClient.findMany({
+          where: {
+            eventType: "homepage_view",
+            visitorId: { not: null },
+          },
+          distinct: ["visitorId"],
+          select: { visitorId: true },
+        })
+      : Promise.resolve([]),
+    analyticsClient
+      ? analyticsClient.findMany({
+          where: {
+            eventType: "homepage_view",
+          },
+          select: {
+            utmSource: true,
+            utmMedium: true,
+            utmCampaign: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        })
+      : Promise.resolve([]),
+    siteContentClient
+      ? siteContentClient.findUnique({
+          where: { key: "homepage" },
+        })
+      : Promise.resolve(null),
+    savedSignupFilterClient
+      ? savedSignupFilterClient.findMany({
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
   ]);
 
   const totalSignups = signups.length;

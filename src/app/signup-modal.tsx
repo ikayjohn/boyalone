@@ -25,6 +25,8 @@ export interface SignupResult {
   fullName: string;
 }
 
+const PRESAVE_EMBED_UNLOCK_SECONDS = 12;
+
 interface SignupModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,8 +34,6 @@ interface SignupModalProps {
   initialSession?: SessionInfo | null;
   presaveUrl?: string;
 }
-
-const PRESAVE_UNLOCK_DELAY_SECONDS = 12;
 
 const BODY_ART_OPTIONS = [
   { value: "", label: "Select one..." },
@@ -133,7 +133,10 @@ export default function SignupModal({
   const [bodyArtPreference, setBodyArtPreference] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [presaveStarted, setPresaveStarted] = useState(false);
-  const [unlockCountdown, setUnlockCountdown] = useState(0);
+  const [presaveAcknowledged, setPresaveAcknowledged] = useState(false);
+  const [showPresaveEmbed, setShowPresaveEmbed] = useState(false);
+  const [embedInteracted, setEmbedInteracted] = useState(false);
+  const [embedUnlockCountdown, setEmbedUnlockCountdown] = useState(0);
   const hasTrackedOpenRef = useRef(false);
   const hasTrackedUnlockRef = useRef(false);
 
@@ -151,27 +154,18 @@ export default function SignupModal({
     setBodyArtPreference("");
     setAgreedToTerms(false);
     setPresaveStarted(false);
-    setUnlockCountdown(0);
+    setPresaveAcknowledged(false);
+    setShowPresaveEmbed(false);
+    setEmbedInteracted(false);
+    setEmbedUnlockCountdown(0);
   }
 
   function handlePresaveClick() {
     trackEvent("presave_click");
     setPresaveStarted(true);
-    setUnlockCountdown(PRESAVE_UNLOCK_DELAY_SECONDS);
-    window.open(presaveUrl, "_blank", "noopener,noreferrer");
+    setShowPresaveEmbed(true);
+    setEmbedInteracted(false);
   }
-
-  useEffect(() => {
-    if (!presaveStarted || unlockCountdown <= 0) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setUnlockCountdown((current) => Math.max(current - 1, 0));
-    }, 1000);
-
-    return () => window.clearTimeout(timeout);
-  }, [presaveStarted, unlockCountdown]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -195,7 +189,7 @@ export default function SignupModal({
     if (
       !isOpen ||
       !presaveStarted ||
-      unlockCountdown > 0 ||
+      !presaveAcknowledged ||
       hasTrackedUnlockRef.current
     ) {
       return;
@@ -203,7 +197,19 @@ export default function SignupModal({
 
     trackEvent("registration_form_unlock");
     hasTrackedUnlockRef.current = true;
-  }, [isOpen, presaveStarted, unlockCountdown]);
+  }, [isOpen, presaveAcknowledged, presaveStarted]);
+
+  useEffect(() => {
+    if (!embedInteracted || embedUnlockCountdown <= 0) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setEmbedUnlockCountdown((current) => Math.max(current - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [embedInteracted, embedUnlockCountdown]);
 
   useEffect(() => {
     if (initialSession) {
@@ -322,14 +328,14 @@ export default function SignupModal({
       />
 
       <div className="relative z-10 flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[28px] border border-black/10 bg-[#F6F1E8] shadow-[0_20px_80px_rgba(0,0,0,0.22)] sm:max-h-[90vh] sm:rounded-none">
-        <div className="flex items-center justify-end border-b border-black/[0.08] px-4 py-3 sm:px-8 sm:py-4">
+        <div className="flex items-center justify-end px-4 py-3 sm:px-8 sm:py-4">
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-11 w-11 cursor-pointer items-center justify-center border border-black/[0.08] text-[#171411]/65 transition-colors hover:border-[#8B5CF6]/50 hover:text-[#8B5CF6]"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center text-[#171411]/65 transition-colors hover:text-[#8B5CF6]"
             aria-label="Close registration modal"
           >
-            <span className="text-xl leading-none">&times;</span>
+            <span className="text-[2rem] leading-none">&times;</span>
           </button>
         </div>
 
@@ -351,7 +357,7 @@ export default function SignupModal({
             />
           ) : (
             <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
-              <div className="border-b border-black/[0.08] px-4 py-6 sm:px-8 sm:py-8 lg:border-b-0 lg:border-r">
+              <div className="border-b border-black/[0.08] px-4 py-6 sm:px-8 sm:py-8 lg:border-b-0">
                 <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.3em] text-[#8B5CF6]/70">
                   {session?.status ?? "Loading Session"}
                 </p>
@@ -369,11 +375,6 @@ export default function SignupModal({
                     align="left"
                     label="Venue"
                     value={session?.venue ?? "Loading..."}
-                  />
-                  <InfoBlock
-                    align="left"
-                    label="Country"
-                    value={session?.country ?? "Loading..."}
                   />
                 </div>
 
@@ -398,11 +399,28 @@ export default function SignupModal({
                   </div>
                 )}
 
-                <p className="mt-8 max-w-sm font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/60 sm:mt-10">
-                  A private night built around{" "}
-                  <span className="text-[#171411]/80">Clarity of Mind</span> and
-                  the energy of Lagos.
-                </p>
+                {!isFull && !registrationClosed ? (
+                  <>
+                    <div className="mt-8 border-t border-black/[0.08] pt-8 sm:mt-10">
+                      <h3 className="font-[family-name:var(--font-playfair)] text-2xl leading-snug text-[#171411]">
+                        To be invited, you must pre-save{" "}
+                        <span className="text-[#171411]/80">Clarity of Mind.</span>
+                      </h3>
+                    </div>
+
+                    <div className="mt-6">
+                      <p className="font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
+                        This is intimate and exclusive. A limited number of
+                        spirits will be invited. If you receive one, you&apos;re
+                        meant to be there.
+                      </p>
+                      <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
+                        Hit the pre-save link below and we&apos;ll unlock the
+                        registration form right after.
+                      </p>
+                    </div>
+                  </>
+                ) : null}
               </div>
 
               <div className="px-4 py-6 sm:px-8 sm:py-8">
@@ -426,15 +444,6 @@ export default function SignupModal({
                   </div>
                 ) : (
                   <>
-                    <h3 className="font-[family-name:var(--font-playfair)] text-2xl text-[#171411]">
-                      Before You Register
-                    </h3>
-                    <p className="mt-2 font-[family-name:var(--font-outfit)] text-sm text-[#171411]/50">
-                      To be invited, you must pre-save{" "}
-                      <span className="text-[#171411]/80">Clarity of Mind</span>.
-                      Once done, the form will unlock here.
-                    </p>
-
                     {error && (
                       <div className="mt-6 border border-red-500/30 bg-red-500/10 px-4 py-3">
                         <p className="font-[family-name:var(--font-outfit)] text-sm text-red-700">
@@ -452,55 +461,20 @@ export default function SignupModal({
                       </div>
                     ) : null}
 
-                    <div className="mt-6 border border-black/[0.08] bg-black/[0.02] px-4 py-4 sm:mt-8">
-                      <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.18em] text-[#171411]/45">
-                        Heads Up
-                      </p>
-                      <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
-                        This is intimate and exclusive. A limited number of
-                        spirits will be invited. If you receive one, you&apos;re
-                        meant to be there.
-                      </p>
-                      <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/70">
-                        Hit the pre-save link below and we&apos;ll unlock the
-                        registration form right after.
-                      </p>
-                    </div>
-
-                    <div className="mt-5 flex flex-col gap-3 sm:mt-6">
-                      <button
-                        type="button"
-                        onClick={handlePresaveClick}
-                        className="w-full cursor-pointer bg-[#8B5CF6] px-6 py-4 font-[family-name:var(--font-outfit)] text-sm font-semibold uppercase tracking-[0.16em] text-[#0A0A0A] transition-all duration-300 hover:bg-[#7C3AED] hover:shadow-[0_0_40px_rgba(139,92,246,0.3)] sm:px-8 sm:tracking-[0.18em]"
-                      >
-                        Pre-Save To Continue
-                      </button>
-                      <p className="font-[family-name:var(--font-outfit)] text-xs leading-relaxed text-[#171411]/45">
-                        The pre-save opens in a new tab. Come back here when
-                        you&apos;re done.
-                      </p>
-                    </div>
+                    {!presaveStarted ? (
+                      <div className="mt-3 flex flex-col gap-3 sm:mt-4">
+                        <button
+                          type="button"
+                          onClick={handlePresaveClick}
+                          className="w-full cursor-pointer bg-[#8B5CF6] px-6 py-4 font-[family-name:var(--font-outfit)] text-sm font-semibold uppercase tracking-[0.16em] text-[#0A0A0A] transition-all duration-300 hover:bg-[#7C3AED] hover:shadow-[0_0_40px_rgba(139,92,246,0.3)] sm:px-8 sm:tracking-[0.18em]"
+                        >
+                          Pre-Save To Continue
+                        </button>
+                      </div>
+                    ) : null}
 
                     {presaveStarted ? (
-                      unlockCountdown > 0 ? (
-                        <div className="mt-8 border-t border-black/[0.08] pt-8">
-                          <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.18em] text-[#8B5CF6]/80">
-                            Unlocking Registration
-                          </p>
-                          <p className="mt-3 font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/60">
-                            Finish the pre-save in the other tab. Your form
-                            opens here in a moment.
-                          </p>
-                          <div className="mt-5 border border-black/[0.08] bg-white/70 px-4 py-5 text-center">
-                            <p className="font-[family-name:var(--font-playfair)] text-4xl text-[#171411]">
-                              {unlockCountdown}
-                            </p>
-                            <p className="mt-2 font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.18em] text-[#171411]/45">
-                              seconds
-                            </p>
-                          </div>
-                        </div>
-                      ) : session ? (
+                      presaveAcknowledged && session ? (
                         <form
                           onSubmit={handleSubmit}
                           className="mt-8 space-y-5 border-t border-black/[0.08] pt-8 sm:space-y-6"
@@ -684,11 +658,53 @@ export default function SignupModal({
                           </button>
                         </form>
                       ) : (
-                        <div className="mt-8 border-t border-black/[0.08] pt-8">
-                          <p className="font-[family-name:var(--font-outfit)] text-sm leading-relaxed text-[#171411]/60">
-                            We&apos;re still pulling in the event details. Give it a
-                            moment and this form will be ready.
-                          </p>
+                        <div className="mt-2">
+                          {showPresaveEmbed ? (
+                            <div className="relative overflow-hidden border border-black/[0.08] bg-white">
+                              <div className="border-b border-black/[0.08] bg-black/[0.02] px-4 py-3">
+                                <p className="font-[family-name:var(--font-outfit)] text-[10px] uppercase tracking-[0.16em] text-[#171411]/45">
+                                  Pre-Save Clarity of Mind
+                                </p>
+                              </div>
+                              {!embedInteracted ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEmbedInteracted(true);
+                                    setEmbedUnlockCountdown(
+                                      PRESAVE_EMBED_UNLOCK_SECONDS
+                                    );
+                                  }}
+                                  aria-label="Interact with pre-save panel"
+                                  className="absolute inset-x-0 top-[49px] z-10 h-[420px] w-full cursor-pointer bg-transparent"
+                                />
+                              ) : null}
+                              <iframe
+                                src={presaveUrl}
+                                title="Pre-save Clarity of Mind"
+                                className="h-[420px] w-full bg-white"
+                              />
+                            </div>
+                          ) : null}
+                          {!embedInteracted || embedUnlockCountdown > 0 ? (
+                            <p className="mt-4 text-center font-[family-name:var(--font-outfit)] text-xs font-semibold tracking-[0.08em] text-[#171411]/60">
+                              PRE-SAVE TO UNLOCK REGISTRATION
+                            </p>
+                          ) : null}
+                          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => setPresaveAcknowledged(true)}
+                              disabled={
+                                loading || !embedInteracted || embedUnlockCountdown > 0
+                              }
+                              className="w-full cursor-pointer bg-[#8B5CF6] px-5 py-4 font-[family-name:var(--font-outfit)] text-xs font-semibold uppercase tracking-[0.16em] text-[#0A0A0A] transition-colors hover:bg-[#7C3AED] disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {embedUnlockCountdown > 0
+                                ? `Continue to Registration in ${embedUnlockCountdown}s`
+                                : "Continue to Registration"}
+                            </button>
+                          </div>
                         </div>
                       )
                     ) : null}
