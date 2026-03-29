@@ -329,10 +329,10 @@ export default function AdminDashboardClient({
               <div className="absolute right-0 top-full z-20 mt-2 min-w-[280px] rounded-lg border border-zinc-200 bg-white p-3 shadow-lg">
                 <div className="mb-3">
                   <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
-                    Export Range
+                    Signup Number Range
                   </p>
                   <p className="mt-1 text-xs text-zinc-500">
-                    Leave blank to export all filtered signups. Order is newest first.
+                    Uses signup order from oldest to newest. For everyone after the first 950, enter 951 in From.
                   </p>
                 </div>
                 <div className="mb-3 grid grid-cols-2 gap-2">
@@ -342,7 +342,7 @@ export default function AdminDashboardClient({
                     inputMode="numeric"
                     value={exportRangeStart}
                     onChange={(e) => setExportRangeStart(e.target.value)}
-                    placeholder="From"
+                    placeholder="From #"
                     className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-[#8B5CF6] focus:outline-none"
                   />
                   <input
@@ -351,7 +351,7 @@ export default function AdminDashboardClient({
                     inputMode="numeric"
                     value={exportRangeEnd}
                     onChange={(e) => setExportRangeEnd(e.target.value)}
-                    placeholder="To"
+                    placeholder="To #"
                     className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-[#8B5CF6] focus:outline-none"
                   />
                 </div>

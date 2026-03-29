@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const signups = await prisma.signup.findMany({
       where,
       include: { session: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
       skip,
       take,
     });
