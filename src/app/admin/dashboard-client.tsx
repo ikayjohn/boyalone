@@ -92,6 +92,8 @@ export default function AdminDashboardClient({
   const [editingSession, setEditingSession] = useState<SessionData | null>(null);
   const [showAddSession, setShowAddSession] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [exportRangeStart, setExportRangeStart] = useState("");
+  const [exportRangeEnd, setExportRangeEnd] = useState("");
   const [filterSaving, setFilterSaving] = useState(false);
   const [sessionSaving, setSessionSaving] = useState(false);
   const [contentSaving, setContentSaving] = useState(false);
@@ -187,6 +189,8 @@ export default function AdminDashboardClient({
     if (checkedInFilter !== "all") params.set("checkedIn", checkedInFilter);
     if (bodyArtFilter !== "all") params.set("bodyArtPreference", bodyArtFilter);
     if (sourceFilter !== "all") params.set("utmSource", sourceFilter);
+    if (exportRangeStart.trim()) params.set("rangeStart", exportRangeStart.trim());
+    if (exportRangeEnd.trim()) params.set("rangeEnd", exportRangeEnd.trim());
     return params.toString();
   }
 
@@ -322,13 +326,41 @@ export default function AdminDashboardClient({
               Export
             </button>
             {showExportOptions ? (
-              <div className="absolute right-0 top-full z-20 mt-2 min-w-[180px] rounded-lg border border-zinc-200 bg-white shadow-lg">
+              <div className="absolute right-0 top-full z-20 mt-2 min-w-[280px] rounded-lg border border-zinc-200 bg-white p-3 shadow-lg">
+                <div className="mb-3">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+                    Export Range
+                  </p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Leave blank to export all filtered signups. Order is newest first.
+                  </p>
+                </div>
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    value={exportRangeStart}
+                    onChange={(e) => setExportRangeStart(e.target.value)}
+                    placeholder="From"
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-[#8B5CF6] focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    value={exportRangeEnd}
+                    onChange={(e) => setExportRangeEnd(e.target.value)}
+                    placeholder="To"
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-[#8B5CF6] focus:outline-none"
+                  />
+                </div>
                 {(["xlsx", "csv", "json", "pdf"] as const).map((format) => (
                   <button
                     key={format}
                     type="button"
                     onClick={() => handleExport(format)}
-                    className="block w-full px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+                    className="block w-full rounded-lg px-4 py-2.5 text-left text-sm text-zinc-700 hover:bg-zinc-50"
                   >
                     Export as {format.toUpperCase()}
                   </button>

@@ -5,6 +5,16 @@ import { buildSignupWhereClause } from "@/lib/signup-filters";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 
+function parsePositiveInteger(value: string | null) {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return null;
+  }
+
+  return parsed;
+}
+
 export async function GET(request: NextRequest) {
   const isAdmin = await verifyAdmin();
   if (!isAdmin) {
@@ -13,6 +23,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const format = request.nextUrl.searchParams.get("format") ?? "xlsx";
+    const rangeStart = parsePositiveInteger(
+      request.nextUrl.searchParams.get("rangeStart")
+    );
+    const rangeEnd = parsePositiveInteger(
+      request.nextUrl.searchParams.get("rangeEnd")
+    );
     const where = buildSignupWhereClause({
       search: request.nextUrl.searchParams.get("search") || "",
       sessionCityCode: request.nextUrl.searchParams.get("session") || "",
@@ -21,10 +37,19 @@ export async function GET(request: NextRequest) {
         request.nextUrl.searchParams.get("bodyArtPreference") || "",
       utmSource: request.nextUrl.searchParams.get("utmSource") || "",
     });
+    const skip = rangeStart ? rangeStart - 1 : undefined;
+    const take =
+      rangeStart && rangeEnd && rangeEnd >= rangeStart
+        ? rangeEnd - rangeStart + 1
+        : rangeEnd && !rangeStart
+          ? rangeEnd
+          : undefined;
     const signups = await prisma.signup.findMany({
       where,
       include: { session: true },
       orderBy: { createdAt: "desc" },
+      skip,
+      take,
     });
 
     const exportRows = signups.map((signup) => ({
