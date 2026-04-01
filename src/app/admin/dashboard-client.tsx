@@ -306,6 +306,12 @@ export default function AdminDashboardClient({
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/admin/generate-ticket"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50"
+          >
+            Generate Ticket
+          </Link>
+          <Link
             href="/admin/check-in"
             className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm hover:bg-zinc-50"
           >
@@ -633,6 +639,14 @@ export default function AdminDashboardClient({
               <Detail label="Session" value={selectedSignup.sessionCity} />
               <Detail label="Checked In" value={selectedSignup.checkedIn ? "Yes" : "No"} />
             </div>
+            {selectedSignup.qrCodeData && (
+              <div className="mt-4 flex flex-col items-center border-t border-zinc-100 pt-4">
+                <div className="rounded-lg border border-zinc-200 bg-zinc-900 p-3">
+                  <img src={selectedSignup.qrCodeData} alt="QR Code" width={160} height={160} />
+                </div>
+                <p className="mt-2 text-xs text-zinc-500">{selectedSignup.uniqueId}</p>
+              </div>
+            )}
           </div>
         </ModalShell>
       ) : null}
